@@ -55,3 +55,10 @@ Thumbs.db
 
 # Proto generated files (optional - comment out if you want to commit)
 # api/pb/*.pb.go
+
+
+logs/
+
+scripts/pyproto/__pycache__/
+
+scripts/__pycache__/

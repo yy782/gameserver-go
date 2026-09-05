@@ -30,7 +30,7 @@ type LoginServiceClient interface {
 	// 登录：账号不存在返回 ok=false, reason="账号不存在"（需先注册）
 	Authenticate(ctx context.Context, in *AuthReq, opts ...grpc.CallOption) (*AuthRsp, error)
 	// 注册：账号已存在返回 ok=false, reason="账号已存在"；成功后直接签发 token（自动登录）
-	Register(ctx context.Context, in *RegisterReq, opts ...grpc.CallOption) (*RegisterRsp, error)
+	Register(ctx context.Context, in *RegisterAccountReq, opts ...grpc.CallOption) (*RegisterAccountRsp, error)
 }
 
 type loginServiceClient struct {
@@ -50,8 +50,8 @@ func (c *loginServiceClient) Authenticate(ctx context.Context, in *AuthReq, opts
 	return out, nil
 }
 
-func (c *loginServiceClient) Register(ctx context.Context, in *RegisterReq, opts ...grpc.CallOption) (*RegisterRsp, error) {
-	out := new(RegisterRsp)
+func (c *loginServiceClient) Register(ctx context.Context, in *RegisterAccountReq, opts ...grpc.CallOption) (*RegisterAccountRsp, error) {
+	out := new(RegisterAccountRsp)
 	err := c.cc.Invoke(ctx, LoginService_Register_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -66,7 +66,7 @@ type LoginServiceServer interface {
 	// 登录：账号不存在返回 ok=false, reason="账号不存在"（需先注册）
 	Authenticate(context.Context, *AuthReq) (*AuthRsp, error)
 	// 注册：账号已存在返回 ok=false, reason="账号已存在"；成功后直接签发 token（自动登录）
-	Register(context.Context, *RegisterReq) (*RegisterRsp, error)
+	Register(context.Context, *RegisterAccountReq) (*RegisterAccountRsp, error)
 	mustEmbedUnimplementedLoginServiceServer()
 }
 
@@ -77,7 +77,7 @@ type UnimplementedLoginServiceServer struct {
 func (UnimplementedLoginServiceServer) Authenticate(context.Context, *AuthReq) (*AuthRsp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Authenticate not implemented")
 }
-func (UnimplementedLoginServiceServer) Register(context.Context, *RegisterReq) (*RegisterRsp, error) {
+func (UnimplementedLoginServiceServer) Register(context.Context, *RegisterAccountReq) (*RegisterAccountRsp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Register not implemented")
 }
 func (UnimplementedLoginServiceServer) mustEmbedUnimplementedLoginServiceServer() {}
@@ -112,7 +112,7 @@ func _LoginService_Authenticate_Handler(srv interface{}, ctx context.Context, de
 }
 
 func _LoginService_Register_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RegisterReq)
+	in := new(RegisterAccountReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -124,7 +124,7 @@ func _LoginService_Register_Handler(srv interface{}, ctx context.Context, dec fu
 		FullMethod: LoginService_Register_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(LoginServiceServer).Register(ctx, req.(*RegisterReq))
+		return srv.(LoginServiceServer).Register(ctx, req.(*RegisterAccountReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }

@@ -86,11 +86,13 @@ func main() {
 		os.Exit(0)
 	}()
 
-	// 读取输入防止退出
+	// 读取输入防止退出（stdin 关闭即退出该 goroutine，避免后台空转）
 	go func() {
 		reader := bufio.NewReader(os.Stdin)
 		for {
-			reader.ReadString('\n')
+			if _, err := reader.ReadString('\n'); err != nil {
+				return
+			}
 		}
 	}()
 

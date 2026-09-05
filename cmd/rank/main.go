@@ -85,7 +85,9 @@ func main() {
 	go func() {
 		reader := bufio.NewReader(os.Stdin)
 		for {
-			reader.ReadString('\n')
+			if _, err := reader.ReadString('\n'); err != nil {
+				return
+			}
 		}
 	}()
 

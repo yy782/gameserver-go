@@ -66,14 +66,14 @@ func (l *Login) Authenticate(ctx context.Context, req *pb.AuthReq) (*pb.AuthRsp,
 }
 
 // Register 玩家注册（注册成功后直接签发 token，自动登录）
-func (l *Login) Register(ctx context.Context, req *pb.RegisterReq) (*pb.RegisterRsp, error) {
+func (l *Login) Register(ctx context.Context, req *pb.RegisterAccountReq) (*pb.RegisterAccountRsp, error) {
 	if req.Account == "" || req.Password == "" {
-		return &pb.RegisterRsp{Ok: false, Reason: "账号或密码不能为空"}, nil
+		return &pb.RegisterAccountRsp{Ok: false, Reason: "账号或密码不能为空"}, nil
 	}
 
 	// 检查账号是否已存在
 	if _, err := l.mysqlClient.GetPlayer(ctx, req.Account); err == nil {
-		return &pb.RegisterRsp{
+		return &pb.RegisterAccountRsp{
 			Ok:     false,
 			Reason: "账号已存在",
 		}, nil
@@ -92,7 +92,7 @@ func (l *Login) Register(ctx context.Context, req *pb.RegisterReq) (*pb.Register
 	// 创建玩家
 	pbPlayer, err := l.mysqlClient.CreatePlayer(ctx, req.Account, passwordHash, salt, name)
 	if err != nil {
-		return &pb.RegisterRsp{
+		return &pb.RegisterAccountRsp{
 			Ok:     false,
 			Reason: "注册失败",
 		}, nil
@@ -101,12 +101,12 @@ func (l *Login) Register(ctx context.Context, req *pb.RegisterReq) (*pb.Register
 	// 签发会话 token
 	token, ok := l.issueSession(ctx, pbPlayer)
 	if !ok {
-		return &pb.RegisterRsp{Ok: false, Reason: "会话服务异常"}, nil
+		return &pb.RegisterAccountRsp{Ok: false, Reason: "会话服务异常"}, nil
 	}
 
 	common.Info("[login] 新玩家注册: account=%s player_id=%d name=%s",
 		req.Account, pbPlayer.PlayerId, name)
-	return &pb.RegisterRsp{Ok: true, Player: pbPlayer, Token: token}, nil
+	return &pb.RegisterAccountRsp{Ok: true, Player: pbPlayer, Token: token}, nil
 }
 
 // issueSession 签发会话：token 写 Redis（SETEX token:{token} 600 = player_id），

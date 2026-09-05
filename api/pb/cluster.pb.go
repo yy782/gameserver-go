@@ -141,7 +141,8 @@ func (x *AuthRsp) GetToken() string {
 	return ""
 }
 
-type RegisterReq struct {
+// 与 gs.protocol.RegisterReq 同名字段（避免与客户端协议消息在 pb 包内重名）
+type RegisterAccountReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Account       string                 `protobuf:"bytes,1,opt,name=account,proto3" json:"account,omitempty"`
 	Password      string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
@@ -150,20 +151,20 @@ type RegisterReq struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RegisterReq) Reset() {
-	*x = RegisterReq{}
+func (x *RegisterAccountReq) Reset() {
+	*x = RegisterAccountReq{}
 	mi := &file_cluster_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RegisterReq) String() string {
+func (x *RegisterAccountReq) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RegisterReq) ProtoMessage() {}
+func (*RegisterAccountReq) ProtoMessage() {}
 
-func (x *RegisterReq) ProtoReflect() protoreflect.Message {
+func (x *RegisterAccountReq) ProtoReflect() protoreflect.Message {
 	mi := &file_cluster_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -175,33 +176,33 @@ func (x *RegisterReq) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RegisterReq.ProtoReflect.Descriptor instead.
-func (*RegisterReq) Descriptor() ([]byte, []int) {
+// Deprecated: Use RegisterAccountReq.ProtoReflect.Descriptor instead.
+func (*RegisterAccountReq) Descriptor() ([]byte, []int) {
 	return file_cluster_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *RegisterReq) GetAccount() string {
+func (x *RegisterAccountReq) GetAccount() string {
 	if x != nil {
 		return x.Account
 	}
 	return ""
 }
 
-func (x *RegisterReq) GetPassword() string {
+func (x *RegisterAccountReq) GetPassword() string {
 	if x != nil {
 		return x.Password
 	}
 	return ""
 }
 
-func (x *RegisterReq) GetName() string {
+func (x *RegisterAccountReq) GetName() string {
 	if x != nil {
 		return x.Name
 	}
 	return ""
 }
 
-type RegisterRsp struct {
+type RegisterAccountRsp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Ok            bool                   `protobuf:"varint,1,opt,name=ok,proto3" json:"ok,omitempty"`
 	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
@@ -211,20 +212,20 @@ type RegisterRsp struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RegisterRsp) Reset() {
-	*x = RegisterRsp{}
+func (x *RegisterAccountRsp) Reset() {
+	*x = RegisterAccountRsp{}
 	mi := &file_cluster_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RegisterRsp) String() string {
+func (x *RegisterAccountRsp) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RegisterRsp) ProtoMessage() {}
+func (*RegisterAccountRsp) ProtoMessage() {}
 
-func (x *RegisterRsp) ProtoReflect() protoreflect.Message {
+func (x *RegisterAccountRsp) ProtoReflect() protoreflect.Message {
 	mi := &file_cluster_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -236,33 +237,33 @@ func (x *RegisterRsp) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RegisterRsp.ProtoReflect.Descriptor instead.
-func (*RegisterRsp) Descriptor() ([]byte, []int) {
+// Deprecated: Use RegisterAccountRsp.ProtoReflect.Descriptor instead.
+func (*RegisterAccountRsp) Descriptor() ([]byte, []int) {
 	return file_cluster_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *RegisterRsp) GetOk() bool {
+func (x *RegisterAccountRsp) GetOk() bool {
 	if x != nil {
 		return x.Ok
 	}
 	return false
 }
 
-func (x *RegisterRsp) GetReason() string {
+func (x *RegisterAccountRsp) GetReason() string {
 	if x != nil {
 		return x.Reason
 	}
 	return ""
 }
 
-func (x *RegisterRsp) GetPlayer() *PlayerBase {
+func (x *RegisterAccountRsp) GetPlayer() *PlayerBase {
 	if x != nil {
 		return x.Player
 	}
 	return nil
 }
 
-func (x *RegisterRsp) GetToken() string {
+func (x *RegisterAccountRsp) GetToken() string {
 	if x != nil {
 		return x.Token
 	}
@@ -1800,12 +1801,12 @@ const file_cluster_proto_rawDesc = "" +
 	"\x02ok\x18\x01 \x01(\bR\x02ok\x12\x16\n" +
 	"\x06reason\x18\x02 \x01(\tR\x06reason\x12-\n" +
 	"\x06player\x18\x03 \x01(\v2\x15.gs.common.PlayerBaseR\x06player\x12\x14\n" +
-	"\x05token\x18\x04 \x01(\tR\x05token\"W\n" +
-	"\vRegisterReq\x12\x18\n" +
+	"\x05token\x18\x04 \x01(\tR\x05token\"^\n" +
+	"\x12RegisterAccountReq\x12\x18\n" +
 	"\aaccount\x18\x01 \x01(\tR\aaccount\x12\x1a\n" +
 	"\bpassword\x18\x02 \x01(\tR\bpassword\x12\x12\n" +
-	"\x04name\x18\x03 \x01(\tR\x04name\"z\n" +
-	"\vRegisterRsp\x12\x0e\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\"\x81\x01\n" +
+	"\x12RegisterAccountRsp\x12\x0e\n" +
 	"\x02ok\x18\x01 \x01(\bR\x02ok\x12\x16\n" +
 	"\x06reason\x18\x02 \x01(\tR\x06reason\x12-\n" +
 	"\x06player\x18\x03 \x01(\v2\x15.gs.common.PlayerBaseR\x06player\x12\x14\n" +
@@ -1902,10 +1903,10 @@ const file_cluster_proto_rawDesc = "" +
 	"\aTopNReq\x12\f\n" +
 	"\x01n\x18\x01 \x01(\x05R\x01n\":\n" +
 	"\aTopNRsp\x12/\n" +
-	"\aplayers\x18\x01 \x03(\v2\x15.gs.common.PlayerBaseR\aplayers2\x86\x01\n" +
+	"\aplayers\x18\x01 \x03(\v2\x15.gs.common.PlayerBaseR\aplayers2\x94\x01\n" +
 	"\fLoginService\x128\n" +
-	"\fAuthenticate\x12\x13.gs.cluster.AuthReq\x1a\x13.gs.cluster.AuthRsp\x12<\n" +
-	"\bRegister\x12\x17.gs.cluster.RegisterReq\x1a\x17.gs.cluster.RegisterRsp2\xfd\x01\n" +
+	"\fAuthenticate\x12\x13.gs.cluster.AuthReq\x1a\x13.gs.cluster.AuthRsp\x12J\n" +
+	"\bRegister\x12\x1e.gs.cluster.RegisterAccountReq\x1a\x1e.gs.cluster.RegisterAccountRsp2\xfd\x01\n" +
 	"\rCenterService\x129\n" +
 	"\vVerifyToken\x12\x14.gs.cluster.TokenReq\x1a\x14.gs.cluster.TokenRsp\x129\n" +
 	"\x0fRegisterService\x12\x12.gs.cluster.RegReq\x1a\x12.gs.cluster.RegRsp\x12<\n" +
@@ -1945,47 +1946,47 @@ func file_cluster_proto_rawDescGZIP() []byte {
 
 var file_cluster_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
 var file_cluster_proto_goTypes = []any{
-	(*AuthReq)(nil),         // 0: gs.cluster.AuthReq
-	(*AuthRsp)(nil),         // 1: gs.cluster.AuthRsp
-	(*RegisterReq)(nil),     // 2: gs.cluster.RegisterReq
-	(*RegisterRsp)(nil),     // 3: gs.cluster.RegisterRsp
-	(*TokenReq)(nil),        // 4: gs.cluster.TokenReq
-	(*TokenRsp)(nil),        // 5: gs.cluster.TokenRsp
-	(*RegReq)(nil),          // 6: gs.cluster.RegReq
-	(*RegRsp)(nil),          // 7: gs.cluster.RegRsp
-	(*Empty)(nil),           // 8: gs.cluster.Empty
-	(*HeartbeatReq)(nil),    // 9: gs.cluster.HeartbeatReq
-	(*ServiceEntry)(nil),    // 10: gs.cluster.ServiceEntry
-	(*ServiceList)(nil),     // 11: gs.cluster.ServiceList
-	(*CreateBattleReq)(nil), // 12: gs.cluster.CreateBattleReq
-	(*CreateBattleRsp)(nil), // 13: gs.cluster.CreateBattleRsp
-	(*SubmitOpReq)(nil),     // 14: gs.cluster.SubmitOpReq
-	(*SubmitOpRsp)(nil),     // 15: gs.cluster.SubmitOpRsp
-	(*FinishReq)(nil),       // 16: gs.cluster.FinishReq
-	(*MatchJoinReq)(nil),    // 17: gs.cluster.MatchJoinReq
-	(*MatchJoinRsp)(nil),    // 18: gs.cluster.MatchJoinRsp
-	(*MatchQueryReq)(nil),   // 19: gs.cluster.MatchQueryReq
-	(*MatchQueryRsp)(nil),   // 20: gs.cluster.MatchQueryRsp
-	(*OpForwardReq)(nil),    // 21: gs.cluster.OpForwardReq
-	(*OpForwardRsp)(nil),    // 22: gs.cluster.OpForwardRsp
-	(*QuitRoomReq)(nil),     // 23: gs.cluster.QuitRoomReq
-	(*LeaveMatchReq)(nil),   // 24: gs.cluster.LeaveMatchReq
-	(*SnapshotPushReq)(nil), // 25: gs.cluster.SnapshotPushReq
-	(*FramePushReq)(nil),    // 26: gs.cluster.FramePushReq
-	(*ResultPushReq)(nil),   // 27: gs.cluster.ResultPushReq
-	(*ScoreReq)(nil),        // 28: gs.cluster.ScoreReq
-	(*ScoreRsp)(nil),        // 29: gs.cluster.ScoreRsp
-	(*TopNReq)(nil),         // 30: gs.cluster.TopNReq
-	(*TopNRsp)(nil),         // 31: gs.cluster.TopNRsp
-	(*PlayerBase)(nil),      // 32: gs.common.PlayerBase
-	(*OpInput)(nil),         // 33: gs.protocol.OpInput
-	(*StateSnapshot)(nil),   // 34: gs.protocol.StateSnapshot
-	(*FrameData)(nil),       // 35: gs.protocol.FrameData
-	(*BattleResult)(nil),    // 36: gs.protocol.BattleResult
+	(*AuthReq)(nil),            // 0: gs.cluster.AuthReq
+	(*AuthRsp)(nil),            // 1: gs.cluster.AuthRsp
+	(*RegisterAccountReq)(nil), // 2: gs.cluster.RegisterAccountReq
+	(*RegisterAccountRsp)(nil), // 3: gs.cluster.RegisterAccountRsp
+	(*TokenReq)(nil),           // 4: gs.cluster.TokenReq
+	(*TokenRsp)(nil),           // 5: gs.cluster.TokenRsp
+	(*RegReq)(nil),             // 6: gs.cluster.RegReq
+	(*RegRsp)(nil),             // 7: gs.cluster.RegRsp
+	(*Empty)(nil),              // 8: gs.cluster.Empty
+	(*HeartbeatReq)(nil),       // 9: gs.cluster.HeartbeatReq
+	(*ServiceEntry)(nil),       // 10: gs.cluster.ServiceEntry
+	(*ServiceList)(nil),        // 11: gs.cluster.ServiceList
+	(*CreateBattleReq)(nil),    // 12: gs.cluster.CreateBattleReq
+	(*CreateBattleRsp)(nil),    // 13: gs.cluster.CreateBattleRsp
+	(*SubmitOpReq)(nil),        // 14: gs.cluster.SubmitOpReq
+	(*SubmitOpRsp)(nil),        // 15: gs.cluster.SubmitOpRsp
+	(*FinishReq)(nil),          // 16: gs.cluster.FinishReq
+	(*MatchJoinReq)(nil),       // 17: gs.cluster.MatchJoinReq
+	(*MatchJoinRsp)(nil),       // 18: gs.cluster.MatchJoinRsp
+	(*MatchQueryReq)(nil),      // 19: gs.cluster.MatchQueryReq
+	(*MatchQueryRsp)(nil),      // 20: gs.cluster.MatchQueryRsp
+	(*OpForwardReq)(nil),       // 21: gs.cluster.OpForwardReq
+	(*OpForwardRsp)(nil),       // 22: gs.cluster.OpForwardRsp
+	(*QuitRoomReq)(nil),        // 23: gs.cluster.QuitRoomReq
+	(*LeaveMatchReq)(nil),      // 24: gs.cluster.LeaveMatchReq
+	(*SnapshotPushReq)(nil),    // 25: gs.cluster.SnapshotPushReq
+	(*FramePushReq)(nil),       // 26: gs.cluster.FramePushReq
+	(*ResultPushReq)(nil),      // 27: gs.cluster.ResultPushReq
+	(*ScoreReq)(nil),           // 28: gs.cluster.ScoreReq
+	(*ScoreRsp)(nil),           // 29: gs.cluster.ScoreRsp
+	(*TopNReq)(nil),            // 30: gs.cluster.TopNReq
+	(*TopNRsp)(nil),            // 31: gs.cluster.TopNRsp
+	(*PlayerBase)(nil),         // 32: gs.common.PlayerBase
+	(*OpInput)(nil),            // 33: gs.protocol.OpInput
+	(*StateSnapshot)(nil),      // 34: gs.protocol.StateSnapshot
+	(*FrameData)(nil),          // 35: gs.protocol.FrameData
+	(*BattleResult)(nil),       // 36: gs.protocol.BattleResult
 }
 var file_cluster_proto_depIdxs = []int32{
 	32, // 0: gs.cluster.AuthRsp.player:type_name -> gs.common.PlayerBase
-	32, // 1: gs.cluster.RegisterRsp.player:type_name -> gs.common.PlayerBase
+	32, // 1: gs.cluster.RegisterAccountRsp.player:type_name -> gs.common.PlayerBase
 	32, // 2: gs.cluster.TokenRsp.player:type_name -> gs.common.PlayerBase
 	10, // 3: gs.cluster.ServiceList.services:type_name -> gs.cluster.ServiceEntry
 	32, // 4: gs.cluster.CreateBattleReq.players:type_name -> gs.common.PlayerBase
@@ -1995,7 +1996,7 @@ var file_cluster_proto_depIdxs = []int32{
 	36, // 8: gs.cluster.ResultPushReq.result:type_name -> gs.protocol.BattleResult
 	32, // 9: gs.cluster.TopNRsp.players:type_name -> gs.common.PlayerBase
 	0,  // 10: gs.cluster.LoginService.Authenticate:input_type -> gs.cluster.AuthReq
-	2,  // 11: gs.cluster.LoginService.Register:input_type -> gs.cluster.RegisterReq
+	2,  // 11: gs.cluster.LoginService.Register:input_type -> gs.cluster.RegisterAccountReq
 	4,  // 12: gs.cluster.CenterService.VerifyToken:input_type -> gs.cluster.TokenReq
 	6,  // 13: gs.cluster.CenterService.RegisterService:input_type -> gs.cluster.RegReq
 	8,  // 14: gs.cluster.CenterService.GetServiceList:input_type -> gs.cluster.Empty
@@ -2014,7 +2015,7 @@ var file_cluster_proto_depIdxs = []int32{
 	28, // 27: gs.cluster.RankService.SubmitScore:input_type -> gs.cluster.ScoreReq
 	30, // 28: gs.cluster.RankService.GetTopN:input_type -> gs.cluster.TopNReq
 	1,  // 29: gs.cluster.LoginService.Authenticate:output_type -> gs.cluster.AuthRsp
-	3,  // 30: gs.cluster.LoginService.Register:output_type -> gs.cluster.RegisterRsp
+	3,  // 30: gs.cluster.LoginService.Register:output_type -> gs.cluster.RegisterAccountRsp
 	5,  // 31: gs.cluster.CenterService.VerifyToken:output_type -> gs.cluster.TokenRsp
 	7,  // 32: gs.cluster.CenterService.RegisterService:output_type -> gs.cluster.RegRsp
 	11, // 33: gs.cluster.CenterService.GetServiceList:output_type -> gs.cluster.ServiceList

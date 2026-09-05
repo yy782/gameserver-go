@@ -397,7 +397,9 @@ func (gw *Gateway) HandleRegisterReq(ctx context.Context, session *Session, body
 		return
 	}
 	if !rrsp.Ok {
-		gw.sendProto(session, netproto.MsgRegisterRsp, netproto.FlagRsp, rrsp)
+		gw.sendProto(session, netproto.MsgRegisterRsp, netproto.FlagRsp, &pb.RegisterRsp{
+			Ok: false, Reason: rrsp.Reason,
+		})
 		return
 	}
 
@@ -412,7 +414,9 @@ func (gw *Gateway) HandleRegisterReq(ctx context.Context, session *Session, body
 		gw.AdvertiseAddr(), routeTTLSec)
 
 	common.Info("[gateway] player 注册: %d (%s)", player.PlayerId, player.Name)
-	gw.sendProto(session, netproto.MsgRegisterRsp, netproto.FlagRsp, rrsp)
+	gw.sendProto(session, netproto.MsgRegisterRsp, netproto.FlagRsp, &pb.RegisterRsp{
+		Ok: true, Token: rrsp.Token, Player: rrsp.Player,
+	})
 }
 
 // HandleMatchReq 发起匹配：入队到某 game 实例；异步轮询配对结果后回包

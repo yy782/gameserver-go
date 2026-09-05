@@ -250,12 +250,12 @@ func (cc *ClusterClient) Authenticate(ctx context.Context, account, password str
 }
 
 // Register 注册账号
-func (cc *ClusterClient) Register(ctx context.Context, account, password, name string) (*pb.RegisterRsp, error) {
+func (cc *ClusterClient) Register(ctx context.Context, account, password, name string) (*pb.RegisterAccountRsp, error) {
 	l, err := cc.login(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return l.Register(ctx, &pb.RegisterReq{Account: account, Password: password, Name: name})
+	return l.Register(ctx, &pb.RegisterAccountReq{Account: account, Password: password, Name: name})
 }
 
 // ---------------- rank ----------------

@@ -123,7 +123,7 @@ func (x BattleEvent_Type) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use BattleEvent_Type.Descriptor instead.
 func (BattleEvent_Type) EnumDescriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{6, 0}
+	return file_protocol_proto_rawDescGZIP(), []int{8, 0}
 }
 
 // ---- 1. 登录 ----
@@ -256,6 +256,135 @@ func (x *LoginRsp) GetPlayer() *PlayerBase {
 	return nil
 }
 
+// ---- 1.1 注册----
+type RegisterReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Account       string                 `protobuf:"bytes,1,opt,name=account,proto3" json:"account,omitempty"`
+	Password      string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"` // 可选昵称，留空默认用账号
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RegisterReq) Reset() {
+	*x = RegisterReq{}
+	mi := &file_protocol_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RegisterReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RegisterReq) ProtoMessage() {}
+
+func (x *RegisterReq) ProtoReflect() protoreflect.Message {
+	mi := &file_protocol_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RegisterReq.ProtoReflect.Descriptor instead.
+func (*RegisterReq) Descriptor() ([]byte, []int) {
+	return file_protocol_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *RegisterReq) GetAccount() string {
+	if x != nil {
+		return x.Account
+	}
+	return ""
+}
+
+func (x *RegisterReq) GetPassword() string {
+	if x != nil {
+		return x.Password
+	}
+	return ""
+}
+
+func (x *RegisterReq) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+type RegisterRsp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Ok            bool                   `protobuf:"varint,1,opt,name=ok,proto3" json:"ok,omitempty"`
+	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	Token         string                 `protobuf:"bytes,3,opt,name=token,proto3" json:"token,omitempty"` // 注册成功后直接签发，客户端可自动登录
+	Player        *PlayerBase            `protobuf:"bytes,4,opt,name=player,proto3" json:"player,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RegisterRsp) Reset() {
+	*x = RegisterRsp{}
+	mi := &file_protocol_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RegisterRsp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RegisterRsp) ProtoMessage() {}
+
+func (x *RegisterRsp) ProtoReflect() protoreflect.Message {
+	mi := &file_protocol_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RegisterRsp.ProtoReflect.Descriptor instead.
+func (*RegisterRsp) Descriptor() ([]byte, []int) {
+	return file_protocol_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *RegisterRsp) GetOk() bool {
+	if x != nil {
+		return x.Ok
+	}
+	return false
+}
+
+func (x *RegisterRsp) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *RegisterRsp) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *RegisterRsp) GetPlayer() *PlayerBase {
+	if x != nil {
+		return x.Player
+	}
+	return nil
+}
+
 // ---- 2. 匹配 ----
 type MatchReq struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -268,7 +397,7 @@ type MatchReq struct {
 
 func (x *MatchReq) Reset() {
 	*x = MatchReq{}
-	mi := &file_protocol_proto_msgTypes[2]
+	mi := &file_protocol_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -280,7 +409,7 @@ func (x *MatchReq) String() string {
 func (*MatchReq) ProtoMessage() {}
 
 func (x *MatchReq) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[2]
+	mi := &file_protocol_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -293,7 +422,7 @@ func (x *MatchReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MatchReq.ProtoReflect.Descriptor instead.
 func (*MatchReq) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{2}
+	return file_protocol_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *MatchReq) GetToken() string {
@@ -321,7 +450,7 @@ type MatchRsp struct {
 
 func (x *MatchRsp) Reset() {
 	*x = MatchRsp{}
-	mi := &file_protocol_proto_msgTypes[3]
+	mi := &file_protocol_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -333,7 +462,7 @@ func (x *MatchRsp) String() string {
 func (*MatchRsp) ProtoMessage() {}
 
 func (x *MatchRsp) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[3]
+	mi := &file_protocol_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -346,7 +475,7 @@ func (x *MatchRsp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MatchRsp.ProtoReflect.Descriptor instead.
 func (*MatchRsp) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{3}
+	return file_protocol_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *MatchRsp) GetOk() bool {
@@ -384,7 +513,7 @@ type OpInput struct {
 
 func (x *OpInput) Reset() {
 	*x = OpInput{}
-	mi := &file_protocol_proto_msgTypes[4]
+	mi := &file_protocol_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -396,7 +525,7 @@ func (x *OpInput) String() string {
 func (*OpInput) ProtoMessage() {}
 
 func (x *OpInput) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[4]
+	mi := &file_protocol_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -409,7 +538,7 @@ func (x *OpInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OpInput.ProtoReflect.Descriptor instead.
 func (*OpInput) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{4}
+	return file_protocol_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *OpInput) GetSeq() int32 {
@@ -468,7 +597,7 @@ type EntityState struct {
 
 func (x *EntityState) Reset() {
 	*x = EntityState{}
-	mi := &file_protocol_proto_msgTypes[5]
+	mi := &file_protocol_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -480,7 +609,7 @@ func (x *EntityState) String() string {
 func (*EntityState) ProtoMessage() {}
 
 func (x *EntityState) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[5]
+	mi := &file_protocol_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -493,7 +622,7 @@ func (x *EntityState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EntityState.ProtoReflect.Descriptor instead.
 func (*EntityState) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{5}
+	return file_protocol_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *EntityState) GetPlayerId() int64 {
@@ -543,7 +672,7 @@ type BattleEvent struct {
 
 func (x *BattleEvent) Reset() {
 	*x = BattleEvent{}
-	mi := &file_protocol_proto_msgTypes[6]
+	mi := &file_protocol_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -555,7 +684,7 @@ func (x *BattleEvent) String() string {
 func (*BattleEvent) ProtoMessage() {}
 
 func (x *BattleEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[6]
+	mi := &file_protocol_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -568,7 +697,7 @@ func (x *BattleEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BattleEvent.ProtoReflect.Descriptor instead.
 func (*BattleEvent) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{6}
+	return file_protocol_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *BattleEvent) GetType() BattleEvent_Type {
@@ -612,7 +741,7 @@ type StateSnapshot struct {
 
 func (x *StateSnapshot) Reset() {
 	*x = StateSnapshot{}
-	mi := &file_protocol_proto_msgTypes[7]
+	mi := &file_protocol_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -624,7 +753,7 @@ func (x *StateSnapshot) String() string {
 func (*StateSnapshot) ProtoMessage() {}
 
 func (x *StateSnapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[7]
+	mi := &file_protocol_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -637,7 +766,7 @@ func (x *StateSnapshot) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StateSnapshot.ProtoReflect.Descriptor instead.
 func (*StateSnapshot) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{7}
+	return file_protocol_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *StateSnapshot) GetRoomId() int64 {
@@ -686,7 +815,7 @@ type FrameOp struct {
 
 func (x *FrameOp) Reset() {
 	*x = FrameOp{}
-	mi := &file_protocol_proto_msgTypes[8]
+	mi := &file_protocol_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -698,7 +827,7 @@ func (x *FrameOp) String() string {
 func (*FrameOp) ProtoMessage() {}
 
 func (x *FrameOp) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[8]
+	mi := &file_protocol_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -711,7 +840,7 @@ func (x *FrameOp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FrameOp.ProtoReflect.Descriptor instead.
 func (*FrameOp) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{8}
+	return file_protocol_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *FrameOp) GetPlayerId() int64 {
@@ -741,7 +870,7 @@ type FrameData struct {
 
 func (x *FrameData) Reset() {
 	*x = FrameData{}
-	mi := &file_protocol_proto_msgTypes[9]
+	mi := &file_protocol_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -753,7 +882,7 @@ func (x *FrameData) String() string {
 func (*FrameData) ProtoMessage() {}
 
 func (x *FrameData) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[9]
+	mi := &file_protocol_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -766,7 +895,7 @@ func (x *FrameData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FrameData.ProtoReflect.Descriptor instead.
 func (*FrameData) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{9}
+	return file_protocol_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *FrameData) GetRoomId() int64 {
@@ -818,7 +947,7 @@ type BattleResult struct {
 
 func (x *BattleResult) Reset() {
 	*x = BattleResult{}
-	mi := &file_protocol_proto_msgTypes[10]
+	mi := &file_protocol_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -830,7 +959,7 @@ func (x *BattleResult) String() string {
 func (*BattleResult) ProtoMessage() {}
 
 func (x *BattleResult) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[10]
+	mi := &file_protocol_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -843,7 +972,7 @@ func (x *BattleResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BattleResult.ProtoReflect.Descriptor instead.
 func (*BattleResult) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{10}
+	return file_protocol_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *BattleResult) GetRoomId() int64 {
@@ -891,7 +1020,7 @@ type RankQuery struct {
 
 func (x *RankQuery) Reset() {
 	*x = RankQuery{}
-	mi := &file_protocol_proto_msgTypes[11]
+	mi := &file_protocol_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -903,7 +1032,7 @@ func (x *RankQuery) String() string {
 func (*RankQuery) ProtoMessage() {}
 
 func (x *RankQuery) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[11]
+	mi := &file_protocol_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -916,7 +1045,7 @@ func (x *RankQuery) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RankQuery.ProtoReflect.Descriptor instead.
 func (*RankQuery) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{11}
+	return file_protocol_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *RankQuery) GetN() int32 {
@@ -936,7 +1065,7 @@ type RankRsp struct {
 
 func (x *RankRsp) Reset() {
 	*x = RankRsp{}
-	mi := &file_protocol_proto_msgTypes[12]
+	mi := &file_protocol_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -948,7 +1077,7 @@ func (x *RankRsp) String() string {
 func (*RankRsp) ProtoMessage() {}
 
 func (x *RankRsp) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[12]
+	mi := &file_protocol_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -961,7 +1090,7 @@ func (x *RankRsp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RankRsp.ProtoReflect.Descriptor instead.
 func (*RankRsp) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{12}
+	return file_protocol_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *RankRsp) GetOk() bool {
@@ -988,6 +1117,15 @@ const file_protocol_proto_rawDesc = "" +
 	"\bpassword\x18\x02 \x01(\tR\bpassword\x12\x14\n" +
 	"\x05token\x18\x03 \x01(\tR\x05token\"w\n" +
 	"\bLoginRsp\x12\x0e\n" +
+	"\x02ok\x18\x01 \x01(\bR\x02ok\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\x12\x14\n" +
+	"\x05token\x18\x03 \x01(\tR\x05token\x12-\n" +
+	"\x06player\x18\x04 \x01(\v2\x15.gs.common.PlayerBaseR\x06player\"W\n" +
+	"\vRegisterReq\x12\x18\n" +
+	"\aaccount\x18\x01 \x01(\tR\aaccount\x12\x1a\n" +
+	"\bpassword\x18\x02 \x01(\tR\bpassword\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\"z\n" +
+	"\vRegisterRsp\x12\x0e\n" +
 	"\x02ok\x18\x01 \x01(\bR\x02ok\x12\x16\n" +
 	"\x06reason\x18\x02 \x01(\tR\x06reason\x12\x14\n" +
 	"\x05token\x18\x03 \x01(\tR\x05token\x12-\n" +
@@ -1071,40 +1209,43 @@ func file_protocol_proto_rawDescGZIP() []byte {
 }
 
 var file_protocol_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_protocol_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_protocol_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_protocol_proto_goTypes = []any{
 	(OpType)(0),           // 0: gs.protocol.OpType
 	(BattleEvent_Type)(0), // 1: gs.protocol.BattleEvent.Type
 	(*LoginReq)(nil),      // 2: gs.protocol.LoginReq
 	(*LoginRsp)(nil),      // 3: gs.protocol.LoginRsp
-	(*MatchReq)(nil),      // 4: gs.protocol.MatchReq
-	(*MatchRsp)(nil),      // 5: gs.protocol.MatchRsp
-	(*OpInput)(nil),       // 6: gs.protocol.OpInput
-	(*EntityState)(nil),   // 7: gs.protocol.EntityState
-	(*BattleEvent)(nil),   // 8: gs.protocol.BattleEvent
-	(*StateSnapshot)(nil), // 9: gs.protocol.StateSnapshot
-	(*FrameOp)(nil),       // 10: gs.protocol.FrameOp
-	(*FrameData)(nil),     // 11: gs.protocol.FrameData
-	(*BattleResult)(nil),  // 12: gs.protocol.BattleResult
-	(*RankQuery)(nil),     // 13: gs.protocol.RankQuery
-	(*RankRsp)(nil),       // 14: gs.protocol.RankRsp
-	(*PlayerBase)(nil),    // 15: gs.common.PlayerBase
+	(*RegisterReq)(nil),   // 4: gs.protocol.RegisterReq
+	(*RegisterRsp)(nil),   // 5: gs.protocol.RegisterRsp
+	(*MatchReq)(nil),      // 6: gs.protocol.MatchReq
+	(*MatchRsp)(nil),      // 7: gs.protocol.MatchRsp
+	(*OpInput)(nil),       // 8: gs.protocol.OpInput
+	(*EntityState)(nil),   // 9: gs.protocol.EntityState
+	(*BattleEvent)(nil),   // 10: gs.protocol.BattleEvent
+	(*StateSnapshot)(nil), // 11: gs.protocol.StateSnapshot
+	(*FrameOp)(nil),       // 12: gs.protocol.FrameOp
+	(*FrameData)(nil),     // 13: gs.protocol.FrameData
+	(*BattleResult)(nil),  // 14: gs.protocol.BattleResult
+	(*RankQuery)(nil),     // 15: gs.protocol.RankQuery
+	(*RankRsp)(nil),       // 16: gs.protocol.RankRsp
+	(*PlayerBase)(nil),    // 17: gs.common.PlayerBase
 }
 var file_protocol_proto_depIdxs = []int32{
-	15, // 0: gs.protocol.LoginRsp.player:type_name -> gs.common.PlayerBase
-	0,  // 1: gs.protocol.OpInput.op_type:type_name -> gs.protocol.OpType
-	1,  // 2: gs.protocol.BattleEvent.type:type_name -> gs.protocol.BattleEvent.Type
-	7,  // 3: gs.protocol.StateSnapshot.entities:type_name -> gs.protocol.EntityState
-	8,  // 4: gs.protocol.StateSnapshot.events:type_name -> gs.protocol.BattleEvent
-	6,  // 5: gs.protocol.FrameOp.op:type_name -> gs.protocol.OpInput
-	7,  // 6: gs.protocol.FrameData.entities:type_name -> gs.protocol.EntityState
-	10, // 7: gs.protocol.FrameData.ops:type_name -> gs.protocol.FrameOp
-	15, // 8: gs.protocol.RankRsp.players:type_name -> gs.common.PlayerBase
-	9,  // [9:9] is the sub-list for method output_type
-	9,  // [9:9] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	17, // 0: gs.protocol.LoginRsp.player:type_name -> gs.common.PlayerBase
+	17, // 1: gs.protocol.RegisterRsp.player:type_name -> gs.common.PlayerBase
+	0,  // 2: gs.protocol.OpInput.op_type:type_name -> gs.protocol.OpType
+	1,  // 3: gs.protocol.BattleEvent.type:type_name -> gs.protocol.BattleEvent.Type
+	9,  // 4: gs.protocol.StateSnapshot.entities:type_name -> gs.protocol.EntityState
+	10, // 5: gs.protocol.StateSnapshot.events:type_name -> gs.protocol.BattleEvent
+	8,  // 6: gs.protocol.FrameOp.op:type_name -> gs.protocol.OpInput
+	9,  // 7: gs.protocol.FrameData.entities:type_name -> gs.protocol.EntityState
+	12, // 8: gs.protocol.FrameData.ops:type_name -> gs.protocol.FrameOp
+	17, // 9: gs.protocol.RankRsp.players:type_name -> gs.common.PlayerBase
+	10, // [10:10] is the sub-list for method output_type
+	10, // [10:10] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_protocol_proto_init() }
@@ -1119,7 +1260,7 @@ func file_protocol_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_protocol_proto_rawDesc), len(file_protocol_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   13,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -12,7 +12,7 @@ service LoginService {
   // 登录：账号不存在返回 ok=false, reason="账号不存在"（需先注册）
   rpc Authenticate(AuthReq) returns (AuthRsp);
   // 注册：账号已存在返回 ok=false, reason="账号已存在"；成功后直接签发 token（自动登录）
-  rpc Register(RegisterReq) returns (RegisterRsp);
+  rpc Register(RegisterAccountReq) returns (RegisterAccountRsp);
 }
 
 message AuthReq {
@@ -27,13 +27,14 @@ message AuthRsp {
   string token = 4;
 }
 
-message RegisterReq {
+// 与 gs.protocol.RegisterReq 同名字段（避免与客户端协议消息在 pb 包内重名）
+message RegisterAccountReq {
   string account = 1;
   string password = 2;
   string name = 3;  // 可选昵称，留空默认用账号
 }
 
-message RegisterRsp {
+message RegisterAccountRsp {
   bool ok = 1;
   string reason = 2;
   gs.common.PlayerBase player = 3;
