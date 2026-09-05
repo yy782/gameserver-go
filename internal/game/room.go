@@ -33,6 +33,15 @@ const (
 	SkillCooldownFrames = SkillCooldownMs / TickMs // 40 帧
 )
 
+// roomSink 房间对外部服务的出口：广播帧/快照、推送结算、上报分数。
+// 声明为接口而非 *GameService，便于单元测试注入内存桩，无需真实 gRPC/Redis。
+type roomSink interface {
+	submitScore(playerID int64, score int32) (int32, error)
+	pushFrame(p *RoomPlayer, frame *pb.FrameData)
+	pushSnapshot(p *RoomPlayer, snap *pb.StateSnapshot)
+	pushResult(p *RoomPlayer, result *pb.BattleResult)
+}
+
 // RoomPlayer 房间内玩家战斗状态
 type RoomPlayer struct {
 	PlayerID       int64
@@ -51,7 +60,7 @@ type RoomPlayer struct {
 
 // Room 对局房间（2 人）
 type Room struct {
-	gs *GameService
+	sink roomSink
 
 	RoomID    int64
 	CreatedMs int64
@@ -78,15 +87,15 @@ type opRecord struct {
 	Op       *pb.OpInput
 }
 
-// NewRoom 创建房间
-func NewRoom(roomID int64, p1, p2 *RoomPlayer, mode int32, gs *GameService) *Room {
+// NewRoom 创建房间。sink 负责房间对外推送/上报，通常传 *GameService，测试可传桩实现。
+func NewRoom(roomID int64, p1, p2 *RoomPlayer, mode int32, sink roomSink) *Room {
 	return &Room{
 		RoomID:    roomID,
 		CreatedMs: common.NowMs(),
 		Mode:      mode,
 		P1:        p1,
 		P2:        p2,
-		gs:        gs,
+		sink:      sink,
 	}
 }
 
@@ -232,10 +241,10 @@ func (r *Room) pushResult() {
 
 	// 结算分数：胜 +10，败 +1（平局 winner=0 不结算）
 	if winnerID != 0 {
-		if _, err := r.gs.submitScore(winnerID, WinScore); err != nil {
+		if _, err := r.sink.submitScore(winnerID, WinScore); err != nil {
 			common.Warn("[room %d] 上报胜方分数失败 winner=%d: %v", r.RoomID, winnerID, err)
 		}
-		if _, err := r.gs.submitScore(loserID, LoseScore); err != nil {
+		if _, err := r.sink.submitScore(loserID, LoseScore); err != nil {
 			common.Warn("[room %d] 上报负方分数失败 loser=%d: %v", r.RoomID, loserID, err)
 		}
 	}
@@ -248,10 +257,10 @@ func (r *Room) pushResult() {
 		DurationS: durationS,
 	}
 	if p1.PlayerID != 0 {
-		r.gs.pushResult(p1, result)
+		r.sink.pushResult(p1, result)
 	}
 	if p2.PlayerID != 0 {
-		r.gs.pushResult(p2, result)
+		r.sink.pushResult(p2, result)
 	}
 }
 
@@ -288,13 +297,13 @@ func (r *Room) Tick() {
 		if r.Mode == 0 {
 			fd := r.buildFrameDataLocked(true)
 			r.mu.Unlock()
-			r.gs.pushFrame(r.P1, fd)
-			r.gs.pushFrame(r.P2, fd)
+			r.sink.pushFrame(r.P1, fd)
+			r.sink.pushFrame(r.P2, fd)
 		} else {
 			snap := r.buildSnapshotLocked(true)
 			r.mu.Unlock()
-			r.gs.pushSnapshot(r.P1, snap)
-			r.gs.pushSnapshot(r.P2, snap)
+			r.sink.pushSnapshot(r.P1, snap)
+			r.sink.pushSnapshot(r.P2, snap)
 		}
 		return
 	}
@@ -363,13 +372,13 @@ func (r *Room) Tick() {
 	if r.Mode == 0 {
 		fd := r.buildFrameDataLocked(false)
 		r.mu.Unlock()
-		r.gs.pushFrame(r.P1, fd)
-		r.gs.pushFrame(r.P2, fd)
+		r.sink.pushFrame(r.P1, fd)
+		r.sink.pushFrame(r.P2, fd)
 	} else {
 		snap := r.buildSnapshotLocked(false)
 		r.mu.Unlock()
-		r.gs.pushSnapshot(r.P1, snap)
-		r.gs.pushSnapshot(r.P2, snap)
+		r.sink.pushSnapshot(r.P1, snap)
+		r.sink.pushSnapshot(r.P2, snap)
 	}
 }
 
