@@ -73,6 +73,5 @@ func main() {
 	common.Info("%s started", name)
 	if err := server.Serve(lis); err != nil {
 		common.Fatal("Server error: %v", err)
-		
 	}
 }
