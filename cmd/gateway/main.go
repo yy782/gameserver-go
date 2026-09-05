@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"flag"
 	"fmt"
 	"gameserver/internal/common"
@@ -29,13 +30,30 @@ func main() {
 	tcpHost := cfg.GetString("host", "0.0.0.0")
 	tcpPort := int(cfg.GetInt("tcp_port", 8000))
 	grpcPort := int(cfg.GetInt("grpc_port", 9300))
+
 	redisHost := cfg.GetString("redis_host", "127.0.0.1")
 	redisPort := int(cfg.GetInt("redis_port", 6379))
 
-	common.Info("Starting %s on %s:%d (TCP) %s:%d (gRPC)", name, tcpHost, tcpPort, tcpHost, grpcPort)
+	centerHost := cfg.GetString("center_host", "127.0.0.1")
+	centerPort := int(cfg.GetInt("center_port", 9100))
+	loginHost := cfg.GetString("login_host", "127.0.0.1")
+	loginPort := int(cfg.GetInt("login_port", 9200))
 
-	gw := gateway.NewGateway(name, tcpPort, grpcPort)
-	gw.Init(redisHost, redisPort)
+	common.Info("Starting %s on %s:%d (TCP) %s:%d (gRPC), center=%s:%d login=%s:%d",
+		name, tcpHost, tcpPort, tcpHost, grpcPort, centerHost, centerPort, loginHost, loginPort)
+
+	gw := gateway.NewGateway(name, tcpHost, tcpPort, grpcPort)
+	gw.Init(redisHost, redisPort, centerHost, centerPort, loginHost, loginPort)
+
+	// 注册到中心服 + 心跳 + 服务发现刷新 + 超时扫描
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	gw.Start(ctx)
+
+	// 启动推送 gRPC 服务（接收 game 服务的快照/帧/结果推送）
+	if err := gw.StartGRPCServer(tcpHost, grpcPort); err != nil {
+		common.Fatal("Failed to start push gRPC server: %v", err)
+	}
 
 	// 启动 TCP 服务器
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", tcpHost, tcpPort))
@@ -63,7 +81,9 @@ func main() {
 	go func() {
 		<-sigChan
 		common.Info("Shutting down %s", name)
+		gw.Close()
 		listener.Close()
+		os.Exit(0)
 	}()
 
 	// 读取输入防止退出
@@ -79,12 +99,17 @@ func main() {
 }
 
 func handleClientConnection(gw *gateway.Gateway, conn io.ReadWriteCloser) {
-	defer conn.Close()
-
 	session := &gateway.Session{
 		Conn:       conn,
 		LastPingMs: common.NowMs(),
 	}
+
+	defer func() {
+		conn.Close()
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cleanupCancel()
+		gw.OnClientDisconnect(cleanupCtx, session)
+	}()
 
 	buf := make([]byte, 0, 4096)
 	readBuf := make([]byte, 4096)
@@ -116,9 +141,18 @@ func handleClientConnection(gw *gateway.Gateway, conn io.ReadWriteCloser) {
 				break
 			}
 
-			// 消费这一帧
-			totalLen := 4 + 8 + len(body)
+			// 消费这一帧（整帧长度 = 长度字段值 = 帧头 8 + body）
+			totalLen := netproto.FrameHeaderSize + len(body)
 			buf = buf[totalLen:]
+
+			// 任何数据都视为活跃
+			gw.HandleHeartbeat(session)
+
+			// 心跳帧：原样回发
+			if flags&netproto.FlagHeartbeat != 0 {
+				gw.PongHeartbeat(session)
+				continue
+			}
 
 			// 处理消息
 			handleMessage(gw, session, msgID, flags, body)
@@ -129,19 +163,28 @@ func handleClientConnection(gw *gateway.Gateway, conn io.ReadWriteCloser) {
 func handleMessage(gw *gateway.Gateway, session *gateway.Session, msgID uint16, flags uint16, body []byte) {
 	switch msgID {
 	case netproto.MsgLoginReq:
-		ctx := common.NewContextWithTimeout(5 * time.Second)
+		ctx, cancel := common.NewContextWithTimeout(5 * time.Second)
+		defer cancel()
 		gw.HandleLoginReq(ctx, session, body)
 
+	case netproto.MsgRegisterReq:
+		ctx, cancel := common.NewContextWithTimeout(5 * time.Second)
+		defer cancel()
+		gw.HandleRegisterReq(ctx, session, body)
+
 	case netproto.MsgMatchReq:
-		ctx := common.NewContextWithTimeout(5 * time.Second)
+		ctx, cancel := common.NewContextWithTimeout(15 * time.Second)
+		defer cancel()
 		gw.HandleMatchReq(ctx, session, body)
 
 	case netproto.MsgOpInput:
-		ctx := common.NewContextWithTimeout(1 * time.Second)
+		ctx, cancel := common.NewContextWithTimeout(1 * time.Second)
+		defer cancel()
 		gw.HandleOpInput(ctx, session, body)
 
 	case netproto.MsgRankQuery:
-		ctx := common.NewContextWithTimeout(5 * time.Second)
+		ctx, cancel := common.NewContextWithTimeout(5 * time.Second)
+		defer cancel()
 		gw.HandleRankQuery(ctx, session, body)
 
 	default:

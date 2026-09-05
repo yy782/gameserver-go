@@ -32,6 +32,8 @@ func main() {
 	mysqlUser := cfg.GetString("mysql_user", "root")
 	mysqlPassword := cfg.GetString("mysql_password", "")
 	mysqlDB := cfg.GetString("mysql_db", "gameserver")
+	redisHost := cfg.GetString("redis_host", "127.0.0.1")
+	redisPort := int(cfg.GetInt("redis_port", 6379))
 
 	// MySQL 连接字符串
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
@@ -43,9 +45,12 @@ func main() {
 		common.Fatal("Failed to connect MySQL: %v", err)
 	}
 
+	// Redis（会话 token 与玩家热数据缓存）
+	redisClient := rpc.NewRedisClient(redisHost, redisPort)
+
 	common.Info("Starting %s on %s:%d", name, listenIP, grpcPort)
 
-	loginSvc := login.NewLogin(mysqlClient)
+	loginSvc := login.NewLogin(mysqlClient, redisClient)
 
 	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", listenIP, grpcPort))
 	if err != nil {

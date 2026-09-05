@@ -33,7 +33,7 @@ const (
 // 协议常量
 const (
 	MaxFrameSize    = 1024 * 1024 // 单帧最大长度
-	FrameHeaderSize = 8            // 帧头长度
+	FrameHeaderSize = 8           // 帧头长度
 )
 
 var (
@@ -41,11 +41,12 @@ var (
 	ErrBufferTooSmall = errors.New("缓冲区太小")
 )
 
-// EncodeFrame 组帧为二进制格式
+// EncodeFrame 组帧为二进制格式（与 C++ net/protocol.cpp EncodeFrame 一致）
 // 格式：[4B 长度] [2B msg_id] [2B flags] [protobuf payload]
+// 长度字段 = kFrameHeaderSize + len(body)，即整帧长度（含长度字段自身）
 func EncodeFrame(msgID uint16, flags uint16, body []byte) []byte {
 	frameLen := uint32(FrameHeaderSize + len(body))
-	frame := make([]byte, 4+frameLen)
+	frame := make([]byte, frameLen)
 
 	binary.BigEndian.PutUint32(frame[0:4], frameLen)
 	binary.BigEndian.PutUint16(frame[4:6], msgID)
@@ -55,7 +56,7 @@ func EncodeFrame(msgID uint16, flags uint16, body []byte) []byte {
 	return frame
 }
 
-// TryDecodeFrame 从缓冲区解析一帧
+// TryDecodeFrame 从缓冲区解析一帧（不消费缓冲，由调用方按整帧长度切除）
 // 成功返回 true 并填充 msg_id/flags/body
 // 数据不足返回 false（等待更多数据）
 func TryDecodeFrame(buf []byte, msgID *uint16, flags *uint16, body *[]byte) (bool, error) {
@@ -64,18 +65,21 @@ func TryDecodeFrame(buf []byte, msgID *uint16, flags *uint16, body *[]byte) (boo
 	}
 
 	frameLen := binary.BigEndian.Uint32(buf[0:4])
+	if frameLen < FrameHeaderSize {
+		// 非法长度：协议错乱
+		return false, ErrFrameTooLarge
+	}
 	if frameLen > MaxFrameSize {
 		return false, ErrFrameTooLarge
 	}
 
-	totalLen := int(frameLen) + 4
-	if len(buf) < totalLen {
-		return false, nil
+	if len(buf) < int(frameLen) {
+		return false, nil // 整包未到齐
 	}
 
 	*msgID = binary.BigEndian.Uint16(buf[4:6])
 	*flags = binary.BigEndian.Uint16(buf[6:8])
-	*body = buf[8:totalLen]
+	*body = buf[FrameHeaderSize:int(frameLen)]
 
 	return true, nil
 }

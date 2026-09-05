@@ -4,88 +4,187 @@ import (
 	"context"
 	"fmt"
 	"gameserver/api/pb"
+	"gameserver/internal/common"
+	"sync"
+	"time"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-// ClusterClient 集群客户端
-type ClusterClient struct {
-	centerConn *grpc.ClientConn
-	loginConn  *grpc.ClientConn
-	gameConns  map[string]*grpc.ClientConn
+// ServiceAddr 服务地址（host:port）
+type ServiceAddr struct {
+	Host string
+	Port int32
+}
 
-	centerClient       pb.CenterServiceClient
-	loginClient        pb.LoginServiceClient
-	gameClients        map[string]pb.GameServiceClient
-	gatewayPushClients map[int64]pb.GatewayPushServiceClient
+func (a ServiceAddr) String() string {
+	return common.FormatAddr(a.Host, int(a.Port))
+}
+
+// ClusterClient 集群客户端：封装对 center/login/game/rank 的 gRPC 调用。
+// - 各服务地址通过 config 直连（center/login）或通过中心服务发现动态刷新（game/rank）；
+// - 所有底层连接按地址缓存复用（GetConn），避免重复握手。
+type ClusterClient struct {
+	centerClient pb.CenterServiceClient
+	centerAddr   ServiceAddr
+	centerConn   *grpc.ClientConn
+
+	loginClient pb.LoginServiceClient
+	loginAddr   ServiceAddr
+	loginConn   *grpc.ClientConn
+
+	rankClient pb.RankServiceClient
+	rankAddr   ServiceAddr
+	rankConn   *grpc.ClientConn
+
+	mu       sync.RWMutex
+	gameList []ServiceAddr // 发现的 game 实例（kind=game）
+	gamePick uint32        // round-robin 游标
+
+	connMu   sync.Mutex
+	connPool map[string]*grpc.ClientConn // 动态直连缓存（按地址），用于 room:route 定向转发
 }
 
 // NewClusterClient 创建集群客户端
 func NewClusterClient() *ClusterClient {
 	return &ClusterClient{
-		gameConns:          make(map[string]*grpc.ClientConn),
-		gameClients:        make(map[string]pb.GameServiceClient),
-		gatewayPushClients: make(map[int64]pb.GatewayPushServiceClient),
+		connPool: make(map[string]*grpc.ClientConn),
 	}
 }
 
-func (cc *ClusterClient) ConnectCenter(ctx context.Context, host string, port int) error {
-	addr := fmt.Sprintf("%s:%d", host, port)
+// getConn 按地址获取（并缓存）一个 gRPC 连接
+func (cc *ClusterClient) getConn(ctx context.Context, addr string) (*grpc.ClientConn, error) {
+	cc.connMu.Lock()
+	defer cc.connMu.Unlock()
+
+	if conn, ok := cc.connPool[addr]; ok && conn != nil {
+		return conn, nil
+	}
 	conn, err := grpc.DialContext(ctx, addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return err
-	}
-	cc.centerConn = conn
-	cc.centerClient = pb.NewCenterServiceClient(conn)
-	return nil
-}
-
-func (cc *ClusterClient) ConnectLogin(ctx context.Context, host string, port int) error {
-	addr := fmt.Sprintf("%s:%d", host, port)
-	conn, err := grpc.DialContext(ctx, addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return err
-	}
-	cc.loginConn = conn
-	cc.loginClient = pb.NewLoginServiceClient(conn)
-	return nil
-}
-
-func (cc *ClusterClient) ConnectGame(ctx context.Context, name, host string, port int) error {
-	addr := fmt.Sprintf("%s:%d", host, port)
-	conn, err := grpc.DialContext(ctx, addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return err
-	}
-	cc.gameConns[name] = conn
-	cc.gameClients[name] = pb.NewGameServiceClient(conn)
-	return nil
-}
-
-func (cc *ClusterClient) ConnectGatewayPush(ctx context.Context, playerID int64, host string, port int) error {
-	addr := fmt.Sprintf("%s:%d", host, port)
-	gwConn, err := grpc.DialContext(ctx, addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return err
-	}
-	cc.gatewayPushClients[playerID] = pb.NewGatewayPushServiceClient(gwConn)
-	return nil
-}
-
-// VerifyToken 验证 Token
-func (cc *ClusterClient) VerifyToken(ctx context.Context, token string) (*pb.PlayerBase, error) {
-	resp, err := cc.centerClient.VerifyToken(ctx, &pb.TokenReq{Token: token})
 	if err != nil {
 		return nil, err
 	}
-	if !resp.Ok {
-		return nil, fmt.Errorf("token verification failed")
-	}
-	return resp.Player, nil
+	cc.connPool[addr] = conn
+	return conn, nil
 }
 
+// SetCenterAddr 设置中心服地址
+func (cc *ClusterClient) SetCenterAddr(addr ServiceAddr) { cc.centerAddr = addr }
+
+// SetLoginAddr 设置登录服地址
+func (cc *ClusterClient) SetLoginAddr(addr ServiceAddr) { cc.loginAddr = addr }
+
+// SetRankAddr 设置排行榜服地址（服务发现刷新后调用）
+func (cc *ClusterClient) SetRankAddr(addr ServiceAddr) {
+	cc.mu.Lock()
+	cc.rankAddr = addr
+	cc.mu.Unlock()
+}
+
+// SetGameList 刷新 game 实例列表（服务发现）
+func (cc *ClusterClient) SetGameList(addrs []ServiceAddr) {
+	cc.mu.Lock()
+	cc.gameList = addrs
+	cc.mu.Unlock()
+}
+
+// PickGame round-robin 选取一个 game 实例；无可用实例返回 false
+func (cc *ClusterClient) PickGame() (ServiceAddr, bool) {
+	cc.mu.Lock()
+	defer cc.mu.Unlock()
+	if len(cc.gameList) == 0 {
+		return ServiceAddr{}, false
+	}
+	addr := cc.gameList[int(cc.gamePick)%len(cc.gameList)]
+	cc.gamePick++
+	return addr, true
+}
+
+// GameCount 当前已知 game 实例数量
+func (cc *ClusterClient) GameCount() int {
+	cc.mu.RLock()
+	defer cc.mu.RUnlock()
+	return len(cc.gameList)
+}
+
+// centerClient 懒连接中心服
+func (cc *ClusterClient) center(ctx context.Context) (pb.CenterServiceClient, error) {
+	if cc.centerClient != nil {
+		return cc.centerClient, nil
+	}
+	addr := cc.centerAddr.String()
+	if addr == ":" {
+		return nil, fmt.Errorf("center addr not configured")
+	}
+	conn, err := cc.getConn(ctx, addr)
+	if err != nil {
+		return nil, err
+	}
+	cc.centerClient = pb.NewCenterServiceClient(conn)
+	cc.centerConn = conn
+	return cc.centerClient, nil
+}
+
+// login 懒连接登录服
+func (cc *ClusterClient) login(ctx context.Context) (pb.LoginServiceClient, error) {
+	if cc.loginClient != nil {
+		return cc.loginClient, nil
+	}
+	addr := cc.loginAddr.String()
+	if addr == ":" {
+		return nil, fmt.Errorf("login addr not configured")
+	}
+	conn, err := cc.getConn(ctx, addr)
+	if err != nil {
+		return nil, err
+	}
+	cc.loginClient = pb.NewLoginServiceClient(conn)
+	cc.loginConn = conn
+	return cc.loginClient, nil
+}
+
+// rank 懒连接排行榜服
+func (cc *ClusterClient) rank(ctx context.Context) (pb.RankServiceClient, error) {
+	cc.mu.RLock()
+	addr := cc.rankAddr
+	cc.mu.RUnlock()
+	if addr.Port == 0 {
+		return nil, fmt.Errorf("rank addr not discovered")
+	}
+	if cc.rankClient != nil {
+		return cc.rankClient, nil
+	}
+	conn, err := cc.getConn(ctx, addr.String())
+	if err != nil {
+		return nil, err
+	}
+	cc.rankClient = pb.NewRankServiceClient(conn)
+	cc.rankConn = conn
+	return cc.rankClient, nil
+}
+
+// gameClient 按地址连接指定 game 实例（懒连接，地址可来自 room:route 或服务发现）
+func (cc *ClusterClient) gameClient(ctx context.Context, addr string) (pb.GameServiceClient, error) {
+	if addr == "" {
+		return nil, fmt.Errorf("game addr empty")
+	}
+	conn, err := cc.getConn(ctx, addr)
+	if err != nil {
+		return nil, err
+	}
+	return pb.NewGameServiceClient(conn), nil
+}
+
+// ---------------- center ----------------
+
+// RegisterService 注册本服务到中心服
 func (cc *ClusterClient) RegisterService(ctx context.Context, serviceName, host string, port int, kind string) error {
-	resp, err := cc.centerClient.RegisterService(ctx, &pb.RegReq{
+	c, err := cc.center(ctx)
+	if err != nil {
+		return err
+	}
+	resp, err := c.RegisterService(ctx, &pb.RegReq{
 		ServiceName: serviceName,
 		Host:        host,
 		Port:        int32(port),
@@ -100,42 +199,101 @@ func (cc *ClusterClient) RegisterService(ctx context.Context, serviceName, host 
 	return nil
 }
 
+// Heartbeat 向中心服发送心跳
+func (cc *ClusterClient) Heartbeat(ctx context.Context, serviceName string) error {
+	c, err := cc.center(ctx)
+	if err != nil {
+		return err
+	}
+	_, err = c.Heartbeat(ctx, &pb.HeartbeatReq{ServiceName: serviceName})
+	return err
+}
+
+// GetServiceList 获取中心服存活服务列表
 func (cc *ClusterClient) GetServiceList(ctx context.Context) ([]*pb.ServiceEntry, error) {
-	resp, err := cc.centerClient.GetServiceList(ctx, &pb.Empty{})
+	c, err := cc.center(ctx)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.GetServiceList(ctx, &pb.Empty{})
 	if err != nil {
 		return nil, err
 	}
 	return resp.Services, nil
 }
 
-func (cc *ClusterClient) Heartbeat(ctx context.Context, serviceName string) error {
-	_, err := cc.centerClient.Heartbeat(ctx, &pb.HeartbeatReq{ServiceName: serviceName})
-	return err
-}
-
-// Authenticate 身份验证
-func (cc *ClusterClient) Authenticate(ctx context.Context, account, password string) (*pb.AuthRsp, error) {
-	return cc.loginClient.Authenticate(ctx, &pb.AuthReq{
-		Account:  account,
-		Password: password,
-	})
-}
-
-func (cc *ClusterClient) Register(ctx context.Context, account, password, name string) (*pb.RegisterRsp, error) {
-	return cc.loginClient.Register(ctx, &pb.RegisterReq{
-		Account:  account,
-		Password: password,
-		Name:     name,
-	})
-}
-
-// JoinMatch 加入匹配
-func (cc *ClusterClient) JoinMatch(ctx context.Context, gameServer string, playerID int64, playerName, gatewayAddr string, mode int32) (*pb.MatchJoinRsp, error) {
-	client, ok := cc.gameClients[gameServer]
-	if !ok {
-		return nil, fmt.Errorf("game server not connected: %s", gameServer)
+// VerifyToken 校验 token 并取回玩家信息
+func (cc *ClusterClient) VerifyToken(ctx context.Context, token string) (*pb.PlayerBase, error) {
+	c, err := cc.center(ctx)
+	if err != nil {
+		return nil, err
 	}
-	return client.JoinMatch(ctx, &pb.MatchJoinReq{
+	resp, err := c.VerifyToken(ctx, &pb.TokenReq{Token: token})
+	if err != nil {
+		return nil, err
+	}
+	if !resp.Ok {
+		return nil, fmt.Errorf("token verification failed")
+	}
+	return resp.Player, nil
+}
+
+// ---------------- login ----------------
+
+// Authenticate 登录认证
+func (cc *ClusterClient) Authenticate(ctx context.Context, account, password string) (*pb.AuthRsp, error) {
+	l, err := cc.login(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return l.Authenticate(ctx, &pb.AuthReq{Account: account, Password: password})
+}
+
+// Register 注册账号
+func (cc *ClusterClient) Register(ctx context.Context, account, password, name string) (*pb.RegisterRsp, error) {
+	l, err := cc.login(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return l.Register(ctx, &pb.RegisterReq{Account: account, Password: password, Name: name})
+}
+
+// ---------------- rank ----------------
+
+// SubmitScore 提交战斗分数（排行榜服务做 ZINCRBY，只增不减）
+func (cc *ClusterClient) SubmitScore(ctx context.Context, playerID int64, score int32) (int32, error) {
+	r, err := cc.rank(ctx)
+	if err != nil {
+		return -1, err
+	}
+	resp, err := r.SubmitScore(ctx, &pb.ScoreReq{PlayerId: playerID, Score: score})
+	if err != nil {
+		return -1, err
+	}
+	if !resp.Ok {
+		return -1, fmt.Errorf("submit score failed")
+	}
+	return resp.Rank, nil
+}
+
+// GetTopN 获取排行榜 TopN
+func (cc *ClusterClient) GetTopN(ctx context.Context, n int32) (*pb.TopNRsp, error) {
+	r, err := cc.rank(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return r.GetTopN(ctx, &pb.TopNReq{N: n})
+}
+
+// ---------------- game ----------------
+
+// JoinMatch 向指定 game 实例发起匹配入队（返回 room_id=0 表示排队中）
+func (cc *ClusterClient) JoinMatch(ctx context.Context, addr ServiceAddr, playerID int64, playerName, gatewayAddr string, mode int32) (*pb.MatchJoinRsp, error) {
+	g, err := cc.gameClient(ctx, addr.String())
+	if err != nil {
+		return nil, err
+	}
+	return g.JoinMatch(ctx, &pb.MatchJoinReq{
 		PlayerId:    playerID,
 		PlayerName:  playerName,
 		GatewayAddr: gatewayAddr,
@@ -143,75 +301,73 @@ func (cc *ClusterClient) JoinMatch(ctx context.Context, gameServer string, playe
 	})
 }
 
-func (cc *ClusterClient) QueryMatchResult(ctx context.Context, gameServer string, playerID int64) (*pb.MatchQueryRsp, error) {
-	client, ok := cc.gameClients[gameServer]
-	if !ok {
-		return nil, fmt.Errorf("game server not connected: %s", gameServer)
+// QueryMatchResult 轮询某 game 实例查询匹配结果
+func (cc *ClusterClient) QueryMatchResult(ctx context.Context, addr ServiceAddr, playerID int64) (*pb.MatchQueryRsp, error) {
+	g, err := cc.gameClient(ctx, addr.String())
+	if err != nil {
+		return nil, err
 	}
-	return client.QueryMatchResult(ctx, &pb.MatchQueryReq{PlayerId: playerID})
+	return g.QueryMatchResult(ctx, &pb.MatchQueryReq{PlayerId: playerID})
 }
 
-func (cc *ClusterClient) SubmitOp(ctx context.Context, gameServer string, roomID, playerID int64, op *pb.OpInput) (*pb.OpForwardRsp, error) {
-	client, ok := cc.gameClients[gameServer]
-	if !ok {
-		return nil, fmt.Errorf("game server not connected: %s", gameServer)
+// SubmitOpTo 向房间所在 game 实例定向转发操作（room:route 路由）
+func (cc *ClusterClient) SubmitOpTo(ctx context.Context, addr string, roomID, playerID int64, op *pb.OpInput) (*pb.OpForwardRsp, error) {
+	g, err := cc.gameClient(ctx, addr)
+	if err != nil {
+		return nil, err
 	}
-	return client.SubmitOp(ctx, &pb.OpForwardReq{
+	return g.SubmitOp(ctx, &pb.OpForwardReq{
 		RoomId:   roomID,
 		PlayerId: playerID,
 		Op:       op,
 	})
 }
 
-// PushSnapshot 推送快照
-func (cc *ClusterClient) PushSnapshot(ctx context.Context, playerID int64, snapshot *pb.StateSnapshot) error {
-	client, ok := cc.gatewayPushClients[playerID]
-	if !ok {
-		return fmt.Errorf("gateway push client not connected for player %d", playerID)
+// QuitRoomTo 通知房间所在 game 实例玩家退出
+func (cc *ClusterClient) QuitRoomTo(ctx context.Context, addr string, roomID, playerID int64) error {
+	g, err := cc.gameClient(ctx, addr)
+	if err != nil {
+		return err
 	}
-	_, err := client.PushSnapshot(ctx, &pb.SnapshotPushReq{
-		PlayerId:  playerID,
-		Snapshot: snapshot,
-	})
+	_, err = g.QuitRoom(ctx, &pb.QuitRoomReq{RoomId: roomID, PlayerId: playerID})
 	return err
 }
 
-func (cc *ClusterClient) PushFrame(ctx context.Context, playerID int64, frame *pb.FrameData) error {
-	client, ok := cc.gatewayPushClients[playerID]
-	if !ok {
-		return fmt.Errorf("gateway push client not connected for player %d", playerID)
+// BroadcastLeaveMatch 玩家匹配中下线时，向所有 game 实例广播移出匹配池（幂等）
+func (cc *ClusterClient) BroadcastLeaveMatch(ctx context.Context, playerID int64, playerName, gatewayAddr string) {
+	cc.mu.RLock()
+	addrs := append([]ServiceAddr(nil), cc.gameList...)
+	cc.mu.RUnlock()
+	for _, addr := range addrs {
+		g, err := cc.gameClient(ctx, addr.String())
+		if err != nil {
+			continue
+		}
+		_, _ = g.LeaveMatch(ctx, &pb.LeaveMatchReq{
+			PlayerId:    playerID,
+			PlayerName:  playerName,
+			GatewayAddr: gatewayAddr,
+		})
 	}
-	_, err := client.PushFrame(ctx, &pb.FramePushReq{
-		PlayerId: playerID,
-		Frame:    frame,
-	})
-	return err
 }
 
-func (cc *ClusterClient) PushResult(ctx context.Context, playerID int64, result *pb.BattleResult) error {
-	client, ok := cc.gatewayPushClients[playerID]
-	if !ok {
-		return fmt.Errorf("gateway push client not connected for player %d", playerID)
-	}
-	_, err := client.PushResult(ctx, &pb.ResultPushReq{
-		PlayerId: playerID,
-		Result:   result,
-	})
-	return err
-}
-
+// Close 关闭全部连接
 func (cc *ClusterClient) Close() error {
-	if cc.centerConn != nil {
-		cc.centerConn.Close()
+	cc.connMu.Lock()
+	defer cc.connMu.Unlock()
+	var firstErr error
+	for addr, conn := range cc.connPool {
+		if conn != nil {
+			if err := conn.Close(); err != nil && firstErr == nil {
+				firstErr = err
+			}
+		}
+		delete(cc.connPool, addr)
 	}
-	if cc.loginConn != nil {
-		cc.loginConn.Close()
-	}
-	for _, conn := range cc.gameConns {
-		conn.Close()
-	}
-	for range cc.gatewayPushClients {
-		// TODO: 关闭连接
-	}
-	return nil
+	return firstErr
+}
+
+// GetTimeoutCtx 便捷方法：带超时的 context
+func GetTimeoutCtx(d time.Duration) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), d)
 }

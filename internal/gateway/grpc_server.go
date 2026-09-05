@@ -6,10 +6,10 @@ import (
 	"gameserver/internal/common"
 	"google.golang.org/grpc"
 	"net"
-	"sync"
 )
 
 // GatewayPushService 网关推送服务
+// game 服务通过该 gRPC 服务向玩家推送状态快照 / 输入帧 / 对局结果
 type GatewayPushService struct {
 	pb.UnimplementedGatewayPushServiceServer
 	gw *Gateway
@@ -35,7 +35,7 @@ func (gps *GatewayPushService) PushResult(ctx context.Context, req *pb.ResultPus
 	return &pb.Empty{}, nil
 }
 
-// StartGRPCServer 启动 gRPC 服务器
+// StartGRPCServer 启动网关推送 gRPC 服务器（供 game 服务回推数据）
 func (gw *Gateway) StartGRPCServer(listenIP string, grpcPort int) error {
 	lis, err := net.Listen("tcp", common.FormatAddr(listenIP, grpcPort))
 	if err != nil {
@@ -51,19 +51,6 @@ func (gw *Gateway) StartGRPCServer(listenIP string, grpcPort int) error {
 		}
 	}()
 
+	common.Info("[gateway] 推送 gRPC 服务已启动: %s:%d", listenIP, grpcPort)
 	return nil
-}
-
-// ConnectToServices 连接到其他服务
-func (gw *Gateway) ConnectToServices(centerHost string, centerPort int, loginHost string, loginPort int) error {
-	// TODO: 实现连接逻辑
-	return nil
-}
-
-// GatewayExtended 网关扩展
-type GatewayExtended struct {
-	centerConn *grpc.ClientConn
-	loginConn  *grpc.ClientConn
-	gameConns  map[string]*grpc.ClientConn
-	connMu     sync.RWMutex
 }

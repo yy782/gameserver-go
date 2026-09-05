@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"flag"
 	"fmt"
 	"gameserver/api/pb"
@@ -13,6 +14,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 func main() {
@@ -26,15 +28,41 @@ func main() {
 	}
 
 	name := cfg.GetString("name", "rank")
+	host := cfg.GetString("host", "0.0.0.0")
 	listenIP := cfg.GetString("listen_ip", "0.0.0.0")
 	grpcPort := int(cfg.GetInt("grpc_port", 9600))
 	redisHost := cfg.GetString("redis_host", "127.0.0.1")
 	redisPort := int(cfg.GetInt("redis_port", 6379))
+	centerHost := cfg.GetString("center_host", "127.0.0.1")
+	centerPort := int(cfg.GetInt("center_port", 9100))
 
 	common.Info("Starting %s on %s:%d", name, listenIP, grpcPort)
 
 	redisClient := rpc.NewRedisClient(redisHost, redisPort)
 	rankSvc := rank.NewRankService(redisClient)
+
+	// 注册到中心服并定期心跳
+	cc := rpc.NewClusterClient()
+	cc.SetCenterAddr(rpc.ServiceAddr{Host: centerHost, Port: int32(centerPort)})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() {
+		hb := time.NewTicker(5 * time.Second)
+		defer hb.Stop()
+		reg := time.NewTicker(10 * time.Second)
+		defer reg.Stop()
+		for {
+			select {
+			case <-hb.C:
+				_ = cc.Heartbeat(ctx, name)
+			case <-reg.C:
+				_ = cc.RegisterService(ctx, name, host, grpcPort, "rank")
+			}
+		}
+	}()
+	if err := cc.RegisterService(ctx, name, host, grpcPort, "rank"); err != nil {
+		common.Warn("rank 注册到中心服失败: %v", err)
+	}
 
 	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", listenIP, grpcPort))
 	if err != nil {

@@ -2,8 +2,9 @@ package rpc
 
 import (
 	"context"
-	"github.com/go-redis/redis/v8"
 	"gameserver/internal/common"
+	"github.com/go-redis/redis/v8"
+	"strconv"
 	"time"
 )
 
@@ -95,12 +96,51 @@ func (rc *RedisClient) ZAdd(ctx context.Context, key string, score float64, memb
 	return rc.client.ZAdd(ctx, key, &redis.Z{Score: score, Member: member}).Err()
 }
 
-// ZRangeByScore 有序集合按分数范围查询
+// ZRangeByScore 有序集合按分数范围查询（闭区间）
 func (rc *RedisClient) ZRangeByScore(ctx context.Context, key string, min, max float64) ([]string, error) {
 	return rc.client.ZRangeByScore(ctx, key, &redis.ZRangeBy{
-		Min: "-inf",
-		Max: "+inf",
+		Min: strconv.FormatFloat(min, 'f', -1, 64),
+		Max: strconv.FormatFloat(max, 'f', -1, 64),
 	}).Result()
+}
+
+// ZRevRangeWithScores 有序集合倒序范围查询（带分数）
+func (rc *RedisClient) ZRevRangeWithScores(ctx context.Context, key string, start, stop int64) ([]redis.Z, error) {
+	return rc.client.ZRevRangeWithScores(ctx, key, start, stop).Result()
+}
+
+// ZScore 查询成员当前分数
+func (rc *RedisClient) ZScore(ctx context.Context, key, member string) (float64, error) {
+	val := rc.client.ZScore(ctx, key, member)
+	if val.Err() != nil && val.Err() == redis.Nil {
+		return 0, nil
+	}
+	return val.Val(), val.Err()
+}
+
+// EvalArray 执行 Lua 脚本并返回字符串数组。
+// Lua 在 Redis 单线程内原子执行，用于跨实例匹配等需要原子性的场景。
+func (rc *RedisClient) EvalArray(ctx context.Context, script string, keys []string, args []string) ([]string, error) {
+	val, err := rc.client.Eval(ctx, script, keys, args).Result()
+	if err != nil {
+		return nil, err
+	}
+	items, ok := val.([]interface{})
+	if !ok {
+		return nil, nil
+	}
+	out := make([]string, 0, len(items))
+	for _, it := range items {
+		if s, ok := it.(string); ok {
+			out = append(out, s)
+		}
+	}
+	return out, nil
+}
+
+// SetNX 仅当键不存在时设置（带过期时间），返回是否设置成功
+func (rc *RedisClient) SetNX(ctx context.Context, key string, value interface{}, expireSec int64) (bool, error) {
+	return rc.client.SetNX(ctx, key, value, time.Duration(expireSec)*time.Second).Result()
 }
 
 // Incr 原子递增

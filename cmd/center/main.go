@@ -3,10 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"gameserver/api/pb"
 	"gameserver/internal/center"
 	"gameserver/internal/common"
 	"google.golang.org/grpc"
-	"gameserver/api/pb"
 	"net"
 	"os"
 	"os/signal"
