@@ -53,6 +53,7 @@ func TestVerifyAccount(t *testing.T) {
 	}
 }
 
+
 // TestSignVerifyToken 签发与校验往返
 func TestSignVerifyToken(t *testing.T) {
 	a := newTestAuth(0)
