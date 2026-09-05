@@ -5,7 +5,6 @@ import (
 	"gameserver/api/pb"
 	"gameserver/internal/common"
 	"sync"
-	"time"
 )
 
 // RankClient 排行榜客户端
@@ -24,7 +23,7 @@ func NewRankClient(redisHost string, redisPort int) *RankClient {
 // SubmitScore 提交分数
 func (rc *RankClient) SubmitScore(ctx context.Context, playerID int64, score int32) error {
 	memberKey := common.FormatAddr("", int(playerID))
-	_, err := rc.redisCli.ZAdd(ctx, "rank:scores", float64(score), memberKey)
+	err := rc.redisCli.ZAdd(ctx, "rank:scores", float64(score), memberKey)
 	return err
 }
 

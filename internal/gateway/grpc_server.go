@@ -5,10 +5,8 @@ import (
 	"gameserver/api/pb"
 	"gameserver/internal/common"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"net"
 	"sync"
-	"time"
 )
 
 // GatewayPushService 网关推送服务
@@ -58,27 +56,7 @@ func (gw *Gateway) StartGRPCServer(listenIP string, grpcPort int) error {
 
 // ConnectToServices 连接到其他服务
 func (gw *Gateway) ConnectToServices(centerHost string, centerPort int, loginHost string, loginPort int) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	// 连接到中心服
-	centerAddr := common.FormatAddr(centerHost, centerPort)
-	centerConn, err := grpc.DialContext(ctx, centerAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return err
-	}
-
-	// 连接到登录服
-	loginAddr := common.FormatAddr(loginHost, loginPort)
-	loginConn, err := grpc.DialContext(ctx, loginAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		centerConn.Close()
-		return err
-	}
-
-	gw.centerConn = centerConn
-	gw.loginConn = loginConn
-
+	// TODO: 实现连接逻辑
 	return nil
 }
 

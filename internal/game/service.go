@@ -4,7 +4,6 @@ import (
 	"context"
 	"gameserver/api/pb"
 	"gameserver/internal/common"
-	"gameserver/internal/rpc"
 	"sync"
 	"time"
 )

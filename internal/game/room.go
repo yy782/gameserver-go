@@ -3,7 +3,6 @@ package game
 import (
 	"gameserver/api/pb"
 	"gameserver/internal/common"
-	"math"
 	"sync"
 )
 
@@ -44,7 +43,7 @@ type Room struct {
 	RoomID    int64
 	CreatedMs int64
 	FinishMs  int64
-	Tick      int64
+	tick      int64
 	Finished  bool
 	Started   bool
 	Mode      int32
@@ -134,10 +133,10 @@ func (r *Room) ApplyOp(p *RoomPlayer, op *pb.OpInput) {
 		p.Stepping = true
 
 	case pb.OpType_OP_ATK:
-		if r.Tick-p.LastAtkFrame < AtkCooldownFrames {
+		if r.tick-p.LastAtkFrame < AtkCooldownFrames {
 			break
 		}
-		p.LastAtkFrame = r.Tick
+		p.LastAtkFrame = r.tick
 
 		target := r.FindPlayer(op.TargetId)
 		if target == nil || !target.Alive {
@@ -160,10 +159,10 @@ func (r *Room) ApplyOp(p *RoomPlayer, op *pb.OpInput) {
 		}
 
 	case pb.OpType_OP_SKILL:
-		if r.Tick-p.LastSkillFrame < SkillCooldownFrames {
+		if r.tick-p.LastSkillFrame < SkillCooldownFrames {
 			break
 		}
-		p.LastSkillFrame = r.Tick
+		p.LastSkillFrame = r.tick
 
 		target := r.FindPlayer(op.TargetId)
 		if target == nil || !target.Alive {
@@ -195,7 +194,7 @@ func (r *Room) Tick() {
 		return
 	}
 
-	r.Tick++
+	r.tick++
 
 	// 消费输入
 	r.frameOps = r.frameOps[:0]
@@ -252,7 +251,7 @@ func (r *Room) GetSnapshot(full bool) *pb.StateSnapshot {
 
 	snapshot := &pb.StateSnapshot{
 		RoomId: r.RoomID,
-		Tick:   r.Tick,
+		Tick:   r.tick,
 		Full:   full,
 	}
 
@@ -280,9 +279,9 @@ func (r *Room) GetFrameData(full bool) *pb.FrameData {
 	defer r.mu.Unlock()
 
 	frame := &pb.FrameData{
-		RoomId:  r.RoomID,
-		FrameSeq: r.Tick,
-		Full:    full,
+		RoomId:   r.RoomID,
+		FrameSeq: r.tick,
+		Full:     full,
 	}
 
 	if full {

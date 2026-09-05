@@ -6,6 +6,7 @@ import (
 	"gameserver/internal/common"
 	"gameserver/internal/net"
 	"gameserver/internal/rpc"
+	"google.golang.org/protobuf/proto"
 	"io"
 	"sync"
 	"time"
@@ -59,6 +60,7 @@ func (gw *Gateway) Init(redisHost string, redisPort int) {
 	gw.redisPort = redisPort
 }
 
+// AddSession 添加会话
 func (gw *Gateway) AddSession(session *Session) {
 	gw.sessionMu.Lock()
 	defer gw.sessionMu.Unlock()
@@ -67,12 +69,14 @@ func (gw *Gateway) AddSession(session *Session) {
 	}
 }
 
+// RemoveSession 移除会话
 func (gw *Gateway) RemoveSession(playerID int64) {
 	gw.sessionMu.Lock()
 	defer gw.sessionMu.Unlock()
 	delete(gw.sessions, playerID)
 }
 
+// GetSession 获取会话
 func (gw *Gateway) GetSession(playerID int64) *Session {
 	gw.sessionMu.RLock()
 	defer gw.sessionMu.RUnlock()
@@ -81,7 +85,7 @@ func (gw *Gateway) GetSession(playerID int64) *Session {
 
 func (gw *Gateway) HandleLoginReq(ctx context.Context, session *Session, body []byte) {
 	req := &pb.LoginReq{}
-	if err := req.UnmarshalVT(body); err != nil {
+	if err := proto.Unmarshal(body, req); err != nil {
 		common.Error("Failed to unmarshal LoginReq: %v", err)
 		return
 	}
@@ -96,7 +100,7 @@ func (gw *Gateway) HandleLoginReq(ctx context.Context, session *Session, body []
 		},
 	}
 
-	respBody, _ := resp.MarshalVT()
+	respBody, _ := proto.Marshal(resp)
 	frame := net.EncodeFrame(net.MsgLoginRsp, net.FlagRsp, respBody)
 	session.Conn.Write(frame)
 
@@ -108,7 +112,7 @@ func (gw *Gateway) HandleLoginReq(ctx context.Context, session *Session, body []
 
 func (gw *Gateway) HandleMatchReq(ctx context.Context, session *Session, body []byte) {
 	req := &pb.MatchReq{}
-	if err := req.UnmarshalVT(body); err != nil {
+	if err := proto.Unmarshal(body, req); err != nil {
 		common.Error("Failed to unmarshal MatchReq: %v", err)
 		return
 	}
@@ -119,7 +123,7 @@ func (gw *Gateway) HandleMatchReq(ctx context.Context, session *Session, body []
 		RoomId: 0,
 	}
 
-	respBody, _ := resp.MarshalVT()
+	respBody, _ := proto.Marshal(resp)
 	frame := net.EncodeFrame(net.MsgMatchRsp, net.FlagRsp, respBody)
 	session.Conn.Write(frame)
 
@@ -128,7 +132,7 @@ func (gw *Gateway) HandleMatchReq(ctx context.Context, session *Session, body []
 
 func (gw *Gateway) HandleOpInput(ctx context.Context, session *Session, body []byte) {
 	op := &pb.OpInput{}
-	if err := op.UnmarshalVT(body); err != nil {
+	if err := proto.Unmarshal(body, op); err != nil {
 		common.Error("Failed to unmarshal OpInput: %v", err)
 		return
 	}
@@ -138,7 +142,7 @@ func (gw *Gateway) HandleOpInput(ctx context.Context, session *Session, body []b
 
 func (gw *Gateway) HandleRankQuery(ctx context.Context, session *Session, body []byte) {
 	req := &pb.RankQuery{}
-	if err := req.UnmarshalVT(body); err != nil {
+	if err := proto.Unmarshal(body, req); err != nil {
 		common.Error("Failed to unmarshal RankQuery: %v", err)
 		return
 	}
@@ -149,7 +153,7 @@ func (gw *Gateway) HandleRankQuery(ctx context.Context, session *Session, body [
 		Players: []*pb.PlayerBase{},
 	}
 
-	respBody, _ := resp.MarshalVT()
+	respBody, _ := proto.Marshal(resp)
 	frame := net.EncodeFrame(net.MsgRankRsp, net.FlagRsp, respBody)
 	session.Conn.Write(frame)
 }
@@ -160,18 +164,18 @@ func (gw *Gateway) PushSnapshot(playerID int64, snapshot *pb.StateSnapshot) {
 		return
 	}
 
-	body, _ := snapshot.MarshalVT()
+	body, _ := proto.Marshal(snapshot)
 	frame := net.EncodeFrame(net.MsgSnapshot, net.FlagPush, body)
 	session.Conn.Write(frame)
 }
 
-func (gw *Gateway) PushFrame(playerID int64, frame *pb.FrameData) {
+func (gw *Gateway) PushFrame(playerID int64, frameData *pb.FrameData) {
 	session := gw.GetSession(playerID)
 	if session == nil {
 		return
 	}
 
-	body, _ := frame.MarshalVT()
+	body, _ := proto.Marshal(frameData)
 	frameBytes := net.EncodeFrame(net.MsgFrameData, net.FlagPush, body)
 	session.Conn.Write(frameBytes)
 }
@@ -182,7 +186,7 @@ func (gw *Gateway) PushResult(playerID int64, result *pb.BattleResult) {
 		return
 	}
 
-	body, _ := result.MarshalVT()
+	body, _ := proto.Marshal(result)
 	frameBytes := net.EncodeFrame(net.MsgResult, net.FlagPush, body)
 	session.Conn.Write(frameBytes)
 }

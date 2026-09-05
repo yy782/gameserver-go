@@ -64,11 +64,11 @@ func (cc *ClusterClient) ConnectGame(ctx context.Context, name, host string, por
 
 func (cc *ClusterClient) ConnectGatewayPush(ctx context.Context, playerID int64, host string, port int) error {
 	addr := fmt.Sprintf("%s:%d", host, port)
-	conn, err := grpc.DialContext(ctx, addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	gwConn, err := grpc.DialContext(ctx, addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return err
 	}
-	cc.gatewayPushClients[playerID] = pb.NewGatewayPushServiceClient(conn)
+	cc.gatewayPushClients[playerID] = pb.NewGatewayPushServiceClient(gwConn)
 	return nil
 }
 
@@ -210,7 +210,7 @@ func (cc *ClusterClient) Close() error {
 	for _, conn := range cc.gameConns {
 		conn.Close()
 	}
-	for _, conn := range cc.gatewayPushClients {
+	for range cc.gatewayPushClients {
 		// TODO: 关闭连接
 	}
 	return nil

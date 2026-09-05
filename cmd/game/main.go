@@ -27,11 +27,6 @@ func main() {
 	name := cfg.GetString("name", "game-1")
 	listenIP := cfg.GetString("listen_ip", "0.0.0.0")
 	grpcPort := int(cfg.GetInt("grpc_port", 9400))
-	advertiseIP := cfg.GetString("advertise_ip", "127.0.0.1")
-	centerHost := cfg.GetString("center_host", "127.0.0.1")
-	centerPort := int(cfg.GetInt("center_port", 9100))
-	redisHost := cfg.GetString("redis_host", "127.0.0.1")
-	redisPort := int(cfg.GetInt("redis_port", 6379))
 
 	common.Info("Starting %s on %s:%d", name, listenIP, grpcPort)
 

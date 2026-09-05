@@ -4,10 +4,9 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"gameserver/api/pb"
 	"gameserver/internal/common"
 	"gameserver/internal/gateway"
-	"gameserver/internal/net"
+	netproto "gameserver/internal/net"
 	"io"
 	"net"
 	"os"
@@ -30,10 +29,6 @@ func main() {
 	tcpHost := cfg.GetString("host", "0.0.0.0")
 	tcpPort := int(cfg.GetInt("tcp_port", 8000))
 	grpcPort := int(cfg.GetInt("grpc_port", 9300))
-	centerHost := cfg.GetString("center_host", "127.0.0.1")
-	centerPort := int(cfg.GetInt("center_port", 9100))
-	loginHost := cfg.GetString("login_host", "127.0.0.1")
-	loginPort := int(cfg.GetInt("login_port", 9200))
 	redisHost := cfg.GetString("redis_host", "127.0.0.1")
 	redisPort := int(cfg.GetInt("redis_port", 6379))
 
@@ -57,7 +52,7 @@ func main() {
 				return
 			}
 
-			go handleClientConnection(gw, conn)
+			go handleClientConnection(gw, conn.(io.ReadWriteCloser))
 		}
 	}()
 
@@ -95,11 +90,6 @@ func handleClientConnection(gw *gateway.Gateway, conn io.ReadWriteCloser) {
 	readBuf := make([]byte, 4096)
 
 	for {
-		// 设置读超时
-		if err := conn.SetReadDeadline(time.Now().Add(30 * time.Second)); err != nil {
-			return
-		}
-
 		n, err := conn.Read(readBuf)
 		if err != nil {
 			if err != io.EOF {
@@ -116,7 +106,7 @@ func handleClientConnection(gw *gateway.Gateway, conn io.ReadWriteCloser) {
 			flags := uint16(0)
 			body := []byte(nil)
 
-			ok, err := net.TryDecodeFrame(buf, &msgID, &flags, &body)
+			ok, err := netproto.TryDecodeFrame(buf, &msgID, &flags, &body)
 			if err != nil {
 				common.Error("Decode frame error: %v", err)
 				return
@@ -138,19 +128,19 @@ func handleClientConnection(gw *gateway.Gateway, conn io.ReadWriteCloser) {
 
 func handleMessage(gw *gateway.Gateway, session *gateway.Session, msgID uint16, flags uint16, body []byte) {
 	switch msgID {
-	case net.MsgLoginReq:
+	case netproto.MsgLoginReq:
 		ctx := common.NewContextWithTimeout(5 * time.Second)
 		gw.HandleLoginReq(ctx, session, body)
 
-	case net.MsgMatchReq:
+	case netproto.MsgMatchReq:
 		ctx := common.NewContextWithTimeout(5 * time.Second)
 		gw.HandleMatchReq(ctx, session, body)
 
-	case net.MsgOpInput:
+	case netproto.MsgOpInput:
 		ctx := common.NewContextWithTimeout(1 * time.Second)
 		gw.HandleOpInput(ctx, session, body)
 
-	case net.MsgRankQuery:
+	case netproto.MsgRankQuery:
 		ctx := common.NewContextWithTimeout(5 * time.Second)
 		gw.HandleRankQuery(ctx, session, body)
 

@@ -24,20 +24,6 @@ message LoginRsp {
   gs.common.PlayerBase player = 4;
 }
 
-// ---- 1.1 注册----
-message RegisterReq {
-  string account = 1;
-  string password = 2;
-  string name = 3;  // 可选昵称，留空默认用账号
-}
-
-message RegisterRsp {
-  bool ok = 1;
-  string reason = 2;
-  string token = 3;  // 注册成功后直接签发，客户端可自动登录
-  gs.common.PlayerBase player = 4;
-}
-
 // ---- 2. 匹配 ----
 message MatchReq {
   string token = 1;
