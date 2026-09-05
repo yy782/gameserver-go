@@ -1,0 +1,132 @@
+syntax = "proto3";
+
+package gs.protocol;
+
+import "common.proto";
+
+option go_package = "gameserver/api/pb;pb";
+
+// ==================== 客户端 <-> 网关 协议 ====================
+// 帧格式：4B 长度 | 2B msg_id | 2B flags | protobuf payload
+
+// ---- 1. 登录 ----
+message LoginReq {
+  string account = 1;
+  string password = 2;
+  // 断线重连时复用 token，携带则跳过密码校验
+  string token = 3;
+}
+
+message LoginRsp {
+  bool ok = 1;
+  string reason = 2;
+  string token = 3;
+  gs.common.PlayerBase player = 4;
+}
+
+// ---- 1.1 注册----
+message RegisterReq {
+  string account = 1;
+  string password = 2;
+  string name = 3;  // 可选昵称，留空默认用账号
+}
+
+message RegisterRsp {
+  bool ok = 1;
+  string reason = 2;
+  string token = 3;  // 注册成功后直接签发，客户端可自动登录
+  gs.common.PlayerBase player = 4;
+}
+
+// ---- 2. 匹配 ----
+message MatchReq {
+  string token = 1;
+  // 对局模式：0=帧同步 1=状态同步
+  int32 mode = 2;
+}
+
+message MatchRsp {
+  bool ok = 1;
+  string reason = 2;
+  int64 room_id = 3;
+}
+
+// ---- 3. 玩家操作----
+enum OpType {
+  OP_NONE = 0;
+  OP_MOVE = 1;   // 移动
+  OP_ATK = 2;    // 普攻
+  OP_SKILL = 3;  // 技能
+}
+
+message OpInput {
+  int32 seq = 1;      // 客户端操作序号
+  OpType op_type = 2;
+  float move_dx = 3;  // OP_MOVE 方向
+  float move_dy = 4;
+  int64 target_id = 5; // OP_ATK 目标
+  int32 skill_id = 6;  // OP_SKILL 技能 id
+}
+
+// ---- 4. 状态同步快照 ----
+message EntityState {
+  int64 player_id = 1;
+  float x = 2;
+  float y = 3;
+  int32 hp = 4;
+  bool alive = 5;
+}
+
+message BattleEvent {
+  enum Type {
+    EV_NONE = 0;
+    EV_ATK = 1;    // 普攻命中
+    EV_SKILL = 2;  // 技能命中
+    EV_DEAD = 3;   // 玩家阵亡
+  }
+  Type type = 1;
+  int64 attacker_id = 2;
+  int64 target_id = 3;
+  int32 damage = 4;
+}
+
+message StateSnapshot {
+  int64 room_id = 1;
+  int64 tick = 2;                       // 逻辑帧号（20Hz）
+  repeated EntityState entities = 3;    // 全量实体状态（首帧）或增量
+  repeated BattleEvent events = 4;      // 本 tick 发生的战斗事件
+  bool full = 5;                        // true=全量快照
+}
+
+// ---- 4.1 帧同步输入帧----
+message FrameOp {
+  int64 player_id = 1;
+  OpInput op = 2;
+}
+
+message FrameData {
+  int64 room_id = 1;
+  int64 frame_seq = 2;                    // 逻辑帧号
+  bool full = 3;                          // 首帧 true：entities 携带出生点全量初始状态
+  repeated EntityState entities = 4;      // 仅 full=true 时有值
+  repeated FrameOp ops = 5;               // 本帧各玩家操作（按 player_id 升序）
+}
+
+// ---- 5. 对局结果 ----
+message BattleResult {
+  int64 room_id = 1;
+  int64 winner_id = 2;
+  int64 loser_id = 3;
+  string reason = 4;  // kill / timeout
+  int32 duration_s = 5;
+}
+
+// ---- 6. 排行榜 ----
+message RankQuery {
+  int32 n = 1;  // TopN
+}
+
+message RankRsp {
+  bool ok = 1;
+  repeated gs.common.PlayerBase players = 2;
+}

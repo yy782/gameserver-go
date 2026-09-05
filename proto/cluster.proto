@@ -1,0 +1,231 @@
+syntax = "proto3";
+
+package gs.cluster;
+
+import "common.proto";
+import "protocol.proto";
+
+option go_package = "gameserver/api/pb;pb";
+
+// ==================== 登录服 ====================
+service LoginService {
+  // 登录：账号不存在返回 ok=false, reason="账号不存在"（需先注册）
+  rpc Authenticate(AuthReq) returns (AuthRsp);
+  // 注册：账号已存在返回 ok=false, reason="账号已存在"；成功后直接签发 token（自动登录）
+  rpc Register(RegisterReq) returns (RegisterRsp);
+}
+
+message AuthReq {
+  string account = 1;
+  string password = 2;
+}
+
+message AuthRsp {
+  bool ok = 1;
+  string reason = 2;
+  gs.common.PlayerBase player = 3;
+  string token = 4;
+}
+
+message RegisterReq {
+  string account = 1;
+  string password = 2;
+  string name = 3;  // 可选昵称，留空默认用账号
+}
+
+message RegisterRsp {
+  bool ok = 1;
+  string reason = 2;
+  gs.common.PlayerBase player = 3;
+  string token = 4;  // 注册成功后直接签发，客户端可自动登录
+}
+
+// ==================== 中心服 ====================
+service CenterService {
+  // 校验 token，返回玩家信息（网关登录后调用）
+  rpc VerifyToken(TokenReq) returns (TokenRsp);
+  // 服务注册（各微服务启动时调用）
+  rpc RegisterService(RegReq) returns (RegRsp);
+  // 获取服务列表（服务发现）
+  rpc GetServiceList(Empty) returns (ServiceList);
+  // 服务心跳保活
+  rpc Heartbeat(HeartbeatReq) returns (Empty);
+}
+
+message TokenReq {
+  string token = 1;
+}
+message TokenRsp {
+  bool ok = 1;
+  gs.common.PlayerBase player = 2;
+}
+message RegReq {
+  string service_name = 1;  // 实例名，如 game-1
+  string host = 2;
+  int32 port = 3;
+  string kind = 4;          // login/gateway/game/rank/center
+}
+message RegRsp {
+  bool ok = 1;
+  string reason = 2;
+}
+message Empty {}
+message HeartbeatReq {
+  string service_name = 1;
+}
+message ServiceEntry {
+  string service_name = 1;
+  string host = 2;
+  int32 port = 3;
+  string kind = 4;
+}
+message ServiceList {
+  repeated ServiceEntry services = 1;
+}
+
+// ==================== 战斗服 ====================
+service BattleService {
+  rpc CreateBattle(CreateBattleReq) returns (CreateBattleRsp);
+  rpc SubmitOp(SubmitOpReq) returns (SubmitOpRsp);
+  rpc FinishBattle(FinishReq) returns (Empty);
+}
+
+message CreateBattleReq {
+  int64 battle_id = 1;
+  repeated gs.common.PlayerBase players = 2;
+  int32 mode = 3;  // 0=帧同步 1=状态同步
+}
+message CreateBattleRsp {
+  bool ok = 1;
+  string reason = 2;
+}
+message SubmitOpReq {
+  int64 battle_id = 1;
+  int64 player_id = 2;
+  int32 seq = 3;
+  string op_data = 4;
+}
+message SubmitOpRsp {
+  bool ok = 1;
+  string reason = 2;
+  int32 accepted_frame = 3;
+}
+message FinishReq {
+  int64 battle_id = 1;
+  int64 winner_id = 2;
+  int32 winner_score = 3;
+}
+
+// ==================== 游戏服====================
+service GameService {
+  // 玩家匹配进房（2 人凑齐即开局）。匹配不阻塞：入队后立即返回
+  // room_id=0 表示排队中，网关轮询 QueryMatchResult 获取配对结果。
+  rpc JoinMatch(MatchJoinReq) returns (MatchJoinRsp);
+  // 查询匹配结果（网关轮询，room_id=0 表示仍在排队）
+  rpc QueryMatchResult(MatchQueryReq) returns (MatchQueryRsp);
+  // 转发玩家操作给房间
+  rpc SubmitOp(OpForwardReq) returns (OpForwardRsp);
+  // 玩家主动退出房间
+  rpc QuitRoom(QuitRoomReq) returns (Empty);
+  // 玩家在匹配等待中下线：从匹配池移除，避免配到死连接（广播给所有 game 实例，幂等）
+  rpc LeaveMatch(LeaveMatchReq) returns (Empty);
+}
+
+message MatchJoinReq {
+  int64 player_id = 1;
+  string player_name = 2;
+  // 玩家所在网关地址（host:grpc_port），游戏服据此推送快照
+  string gateway_addr = 3;
+  // 对局模式：0=帧同步 1=状态同步（默认状态同步）
+  int32 mode = 4;
+}
+
+message MatchJoinRsp {
+  bool ok = 1;
+  string reason = 2;
+  // 0 表示已入队排队中（配对结果需 QueryMatchResult 轮询）
+  int64 room_id = 3;
+}
+
+message MatchQueryReq {
+  int64 player_id = 1;
+}
+
+message MatchQueryRsp {
+  bool ok = 1;
+  string reason = 2;
+  // 0 表示仍在排队
+  int64 room_id = 3;
+}
+
+message OpForwardReq {
+  int64 room_id = 1;
+  int64 player_id = 2;
+  gs.protocol.OpInput op = 3;
+}
+
+message OpForwardRsp {
+  bool ok = 1;
+  string reason = 2;
+}
+
+message QuitRoomReq {
+  int64 room_id = 1;
+  int64 player_id = 2;
+}
+
+// 玩家在匹配等待中下线（网关断连检测后广播，从匹配池移除）
+message LeaveMatchReq {
+  int64 player_id = 1;
+  string player_name = 2;
+  // 玩家所在网关地址（与 JoinMatch 的 gateway_addr 同源，用于构造池 member）
+  string gateway_addr = 3;
+}
+
+// ==================== 网关推送 ====================
+service GatewayPushService {
+  // 游戏服把状态快照推给网关，由网关转给玩家（状态同步模式）
+  rpc PushSnapshot(SnapshotPushReq) returns (Empty);
+  // 游戏服把输入帧推给网关，由网关转给玩家（帧同步模式）
+  rpc PushFrame(FramePushReq) returns (Empty);
+  // 对局结束推送结果
+  rpc PushResult(ResultPushReq) returns (Empty);
+}
+
+message SnapshotPushReq {
+  int64 player_id = 1;
+  gs.protocol.StateSnapshot snapshot = 2;
+}
+
+message FramePushReq {
+  int64 player_id = 1;
+  gs.protocol.FrameData frame = 2;
+}
+
+message ResultPushReq {
+  int64 player_id = 1;                 // 目标玩家
+  gs.protocol.BattleResult result = 2;
+}
+
+// ==================== 排行榜服 ====================
+service RankService {
+  // 提交一场战斗的分数
+  rpc SubmitScore(ScoreReq) returns (ScoreRsp);
+  // 获取 TopN 排行
+  rpc GetTopN(TopNReq) returns (TopNRsp);
+}
+
+message ScoreReq {
+  int64 player_id = 1;
+  int32 score = 2;
+}
+message ScoreRsp {
+  bool ok = 1;
+  int32 rank = 2;  // 提交后玩家当前名次
+}
+message TopNReq {
+  int32 n = 1;
+}
+message TopNRsp {
+  repeated gs.common.PlayerBase players = 1;
+}

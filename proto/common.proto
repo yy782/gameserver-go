@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package gs.common;
+
+option go_package = "gameserver/api/pb;pb";
+
+// 玩家基础信息
+message PlayerBase {
+  int64 player_id = 1;
+  string name = 2;
+  int32 level = 3;
+  int64 exp = 4;
+  int64 gold = 5;
+  int32 server_id = 6;
+  int32 score = 7;
+}
+
+// 二维坐标
+message Vec2 {
+  float x = 1;
+  float y = 2;
+}
