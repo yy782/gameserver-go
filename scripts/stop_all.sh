@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Go 版一键停止：结束 logs/*.pid 记录的进程
 set -euo pipefail
-
+# ./scripts/stop_all.sh
 cd "$(dirname "$0")/.."
 
 for pidfile in logs/*.pid; do

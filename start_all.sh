@@ -63,6 +63,12 @@ sleep 1
 RANK_PID=$!
 echo "rank started (PID: $RANK_PID)"
 
+sleep 1
+
+./bin/api -config config/api.json &
+API_PID=$!
+echo "api (admin HTTP :9700) started (PID: $API_PID)"
+
 echo ""
 echo "All services started!"
 echo "Center: $CENTER_PID"
@@ -71,11 +77,12 @@ echo "Gateway: $GATEWAY_PID"
 echo "Game-1: $GAME1_PID"
 echo "Game-2: $GAME2_PID"
 echo "Rank: $RANK_PID"
+echo "Api: $API_PID"
 echo ""
 echo "Press Ctrl+C to stop all services..."
 
 # 捕获 SIGINT，停止所有服务
-trap "kill $CENTER_PID $LOGIN_PID $GATEWAY_PID $GAME1_PID $GAME2_PID $RANK_PID" INT
+trap "kill $CENTER_PID $LOGIN_PID $GATEWAY_PID $GAME1_PID $GAME2_PID $RANK_PID $API_PID" INT
 
 # 等待信号
 wait

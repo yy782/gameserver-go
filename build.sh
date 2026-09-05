@@ -23,5 +23,8 @@ go build -o bin/game ./cmd/game
 echo "Building rank..."
 go build -o bin/rank ./cmd/rank
 
+echo "Building api (admin HTTP)..."
+go build -o bin/api ./cmd/api
+
 echo "All binaries built successfully!"
 ls -lh bin/
